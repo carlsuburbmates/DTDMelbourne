@@ -1,0 +1,140 @@
+# BMAD Configuration for Dog Trainers Directory (DTD) Project
+# Generated: 2025-12-24
+# Phase 1: BMAD Configuration
+
+# Core Configuration
+bmad_folder: "_bmad"
+user_name: "DTD Developer"
+communication_language: "English"
+document_output_language: "English"
+
+# Directory Configuration
+agent_sidecar_folder: ".bmad-user-memory"
+output_folder: "docs"
+
+# DTD Project Context
+dtd_project_context:
+  documentation_path: "DOCS/"
+  technology_stack:
+    - "Next.js 15"
+    - "TypeScript"
+    - "Tailwind CSS"
+    - "Supabase"
+    - "Stripe"
+    - "Z.AI"
+    - "OpenAI"
+    - "Vercel"
+  architectural_decisions_locked: true
+  total_decisions: 15
+
+# Module Configuration
+modules:
+  bmb:
+    enabled: true
+    path: "_bmad/bmb"
+    description: "BMAD Builder - Agent and workflow creation"
+  
+  bmm:
+    enabled: true
+    path: "_bmad/bmm"
+    description: "Business Method - Development workflows and agents"
+  
+  cis:
+    enabled: true
+    path: "_bmad/cis"
+    description: "Creativity & Innovation Suite - Creative workflows"
+  
+  core:
+    enabled: true
+    path: "_bmad/core"
+    description: "Core BMAD functionality"
+
+# Workflow Configuration
+workflows:
+  enabled_workflows:
+    - "create-agent"
+    - "create-module"
+    - "create-workflow"
+    - "edit-agent"
+    - "edit-workflow"
+    - "workflow-compliance-check"
+    - "create-product-brief"
+    - "research"
+    - "create-ux-design"
+    - "prd"
+    - "create-architecture"
+    - "create-epics-and-stories"
+    - "check-implementation-readiness"
+    - "create-story"
+    - "dev-story"
+    - "code-review"
+    - "sprint-planning"
+    - "sprint-status"
+    - "retrospective"
+    - "correct-course"
+    - "document-project"
+    - "excalidraw-diagrams"
+    - "create-diagram"
+    - "create-dataflow"
+
+# Agent Configuration
+agents:
+  bmm_agents:
+    - "analyst"
+    - "architect"
+    - "dev"
+    - "pm"
+    - "quick-flow-solo-dev"
+    - "sm"
+    - "tea"
+    - "tech-writer"
+    - "ux-designer"
+  
+  cis_agents:
+    - "brainstorming-coach"
+    - "creative-problem-solver"
+    - "design-thinking-coach"
+    - "innovation-strategist"
+    - "presentation-master"
+    - "storyteller"
+  
+  core_agents:
+    - "bmad-master"
+    - "bmad-builder"
+
+# Development Settings
+development:
+  project_type: "web-application"
+  framework: "Next.js 15"
+  language: "TypeScript"
+  styling: "Tailwind CSS"
+  database: "Supabase"
+  payment: "Stripe"
+  ai_services:
+    - "Z.AI"
+    - "OpenAI"
+  deployment: "Vercel"
+
+# Documentation Standards
+documentation:
+  standards_path: "_bmad/bmm/data/documentation-standards.md"
+  project_context_template: "_bmad/bmm/data/project-context-template.md"
+  output_format: "markdown"
+  include_timestamps: true
+  include_version_info: true
+
+# Memory Configuration
+memory:
+  sidecar_enabled: true
+  sidecar_path: ".bmad-user-memory"
+  persistent_memory: true
+  session_memory: true
+  context_retention: "long-term"
+
+# Quality Assurance
+quality_assurance:
+  enable_compliance_checks: true
+  enable_validation: true
+  enable_self_review: true
+  min_test_coverage: 80
+  code_style_enforcement: true

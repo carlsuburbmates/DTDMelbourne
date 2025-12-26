@@ -1,0 +1,3290 @@
+openapi: 3.0.3
+info:
+  title: Dog Trainers Directory API
+  description: |
+    API for the Dog Trainers Directory platform.
+    
+    This API provides endpoints for:
+    - Public access to trainer listings and search
+    - Trainer profile management
+    - Admin moderation and management
+    - Emergency triage and contacts
+    - Authentication with MFA support
+    
+    ## Authentication
+    
+    Most endpoints require authentication via JWT tokens. Include the token in the Authorization header:
+    
+    `Authorization: Bearer <access_token>`
+    
+    ## Rate Limiting
+    
+    All endpoints are rate limited. Rate limit headers are included in responses:
+    
+    - `X-RateLimit-Limit`: Maximum requests per window
+    - `X-RateLimit-Remaining`: Remaining requests in current window
+    - `X-RateLimit-Reset`: Unix timestamp when window resets
+    - `Retry-After`: Seconds until retry (only when rate limited)
+  version: 1.0.0
+  contact:
+    name: Dog Trainers Directory Support
+    email: support@dogtrainersdirectory.com.au
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.dogtrainersdirectory.com.au/v1
+    description: Production server
+  - url: https://staging-api.dogtrainersdirectory.com.au/v1
+    description: Staging server
+  - url: http://localhost:3000/api/v1
+    description: Development server
+
+tags:
+  - name: Public
+    description: Publicly accessible endpoints
+  - name: Trainers
+    description: Trainer-specific endpoints
+  - name: Admin
+    description: Admin-only endpoints
+  - name: Auth
+    description: Authentication and MFA endpoints
+  - name: Emergency
+    description: Emergency triage and contacts
+  - name: Webhooks
+    description: Webhook endpoints
+
+paths:
+  # ============================================================================
+  # PUBLIC ENDPOINTS
+  # ============================================================================
+
+  /trainers:
+    get:
+      tags:
+        - Public
+      summary: Search trainers
+      description: Search and filter trainers with pagination
+      operationId: searchTrainers
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortOrder'
+        - $ref: '#/components/parameters/CouncilId'
+        - $ref: '#/components/parameters/LocalityId'
+        - $ref: '#/components/parameters/ResourceType'
+        - $ref: '#/components/parameters/AgeSpecialty'
+        - $ref: '#/components/parameters/BehaviorIssue'
+        - $ref: '#/components/parameters/ServiceType'
+        - $ref: '#/components/parameters/Verified'
+        - $ref: '#/components/parameters/Claimed'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainersResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainers/{id}:
+    get:
+      tags:
+        - Public
+      summary: Get trainer profile
+      description: Get detailed trainer profile by ID
+      operationId: getTrainerById
+      parameters:
+        - $ref: '#/components/parameters/TrainerId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainerProfileResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainers/{id}/reviews:
+    get:
+      tags:
+        - Public
+      summary: Get trainer reviews
+      description: Get all reviews for a specific trainer
+      operationId: getTrainerReviews
+      parameters:
+        - $ref: '#/components/parameters/TrainerId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortOrder'
+        - $ref: '#/components/parameters/MinRating'
+        - $ref: '#/components/parameters/MaxRating'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainerReviewsResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /councils:
+    get:
+      tags:
+        - Public
+      summary: List all councils
+      description: Get list of all Melbourne metropolitan councils
+      operationId: getCouncils
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Region'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouncilsResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /suburbs:
+    get:
+      tags:
+        - Public
+      summary: List suburbs
+      description: Get list of Melbourne suburbs with filtering
+      operationId: getSuburbs
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/CouncilId'
+        - $ref: '#/components/parameters/Region'
+        - $ref: '#/components/parameters/Postcode'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuburbsResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /services:
+    get:
+      tags:
+        - Public
+      summary: List trainer services
+      description: Get list of available trainer service types
+      operationId: getServices
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicesResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /issues:
+    get:
+      tags:
+        - Public
+      summary: List dog behavior issues
+      description: Get list of dog behavior issue types
+      operationId: getIssues
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuesResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /age-groups:
+    get:
+      tags:
+        - Public
+      summary: List dog age groups
+      description: Get list of dog age group types
+      operationId: getAgeGroups
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgeGroupsResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /emergency/submit:
+    post:
+      tags:
+        - Emergency
+      summary: Submit emergency triage
+      description: Submit an emergency triage request for AI classification using z.ai with deterministic fallback
+      operationId: submitEmergencyTriage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyTriageRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyTriageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /emergency/contacts:
+    get:
+      tags:
+        - Emergency
+      summary: Get emergency contacts
+      description: Get emergency contacts for a specific area
+      operationId: getEmergencyContacts
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/CouncilId'
+        - $ref: '#/components/parameters/LocalityId'
+        - $ref: '#/components/parameters/ResourceType'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyContactsResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # TRAINER ENDPOINTS
+  # ============================================================================
+
+  /trainer/services:
+    post:
+      tags:
+        - Trainers
+      summary: Add service to trainer profile
+      description: Add a service type to trainer profile
+      operationId: addService
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddServiceRequest'
+      responses:
+        '200':
+          description: Service added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddServiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/services/{serviceType}:
+    delete:
+      tags:
+        - Trainers
+      summary: Remove service from trainer profile
+      description: Remove a service type from trainer profile
+      operationId: removeService
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ServiceType'
+      responses:
+        '200':
+          description: Service removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoveServiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/issues:
+    post:
+      tags:
+        - Trainers
+      summary: Add issue to trainer profile
+      description: Add a behavior issue to trainer profile
+      operationId: addIssue
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddIssueRequest'
+      responses:
+        '200':
+          description: Issue added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddIssueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/issues/{behaviorIssue}:
+    delete:
+      tags:
+        - Trainers
+      summary: Remove issue from trainer profile
+      description: Remove a behavior issue from trainer profile
+      operationId: removeIssue
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BehaviorIssue'
+      responses:
+        '200':
+          description: Issue removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoveIssueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/featured/purchase:
+    post:
+      tags:
+        - Trainers
+      summary: Purchase featured placement
+      description: Purchase featured placement for trainer profile
+      operationId: purchaseFeatured
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseFeaturedRequest'
+      responses:
+        '200':
+          description: Featured placement purchased successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseFeaturedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Payment required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/featured/status:
+    get:
+      tags:
+        - Trainers
+      summary: Check featured placement status
+      description: Check featured placement status for trainer
+      operationId: getFeaturedStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CouncilId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeaturedStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      responses:
+        '201':
+          description: Profile created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainerOwnProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Trainers
+      summary: Update trainer profile
+      description: Update authenticated trainer's profile
+      operationId: updateTrainerProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTrainerProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainerOwnProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      tags:
+        - Trainers
+      summary: Get own profile
+      description: Get authenticated trainer's profile
+      operationId: getTrainerOwnProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainerOwnProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/services:
+    post:
+      tags:
+        - Trainers
+      summary: Add service
+      description: Add a service type to trainer profile
+      operationId: addService
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddServiceRequest'
+      responses:
+        '200':
+          description: Service added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddServiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/services/{serviceType}:
+    delete:
+      tags:
+        - Trainers
+      summary: Remove service
+      description: Remove a service type from trainer profile
+      operationId: removeService
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ServiceType'
+      responses:
+        '200':
+          description: Service removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoveServiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/issues:
+    post:
+      tags:
+        - Trainers
+      summary: Add issue
+      description: Add a behavior issue to trainer profile
+      operationId: addIssue
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddIssueRequest'
+      responses:
+        '200':
+          description: Issue added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddIssueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/issues/{behaviorIssue}:
+    delete:
+      tags:
+        - Trainers
+      summary: Remove issue
+      description: Remove a behavior issue from trainer profile
+      operationId: removeIssue
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BehaviorIssue'
+      responses:
+        '200':
+          description: Issue removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoveIssueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/featured/purchase:
+    post:
+      tags:
+        - Trainers
+      summary: Purchase featured placement
+      description: Purchase featured placement for trainer profile
+      operationId: purchaseFeatured
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseFeaturedRequest'
+      responses:
+        '200':
+          description: Featured placement purchased successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseFeaturedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Payment required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /trainer/featured/status:
+    get:
+      tags:
+        - Trainers
+      summary: Check featured status
+      description: Check featured placement status for trainer
+      operationId: getFeaturedStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CouncilId'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeaturedStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # ADMIN ENDPOINTS
+  # ============================================================================
+
+  /admin/trainers:
+    get:
+      tags:
+        - Admin
+      summary: List all trainers
+      description: Get list of all trainers with filtering (admin only)
+      operationId: adminListTrainers
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortOrder'
+        - $ref: '#/components/parameters/AdminStatus'
+        - $ref: '#/components/parameters/CouncilId'
+        - $ref: '#/components/parameters/ResourceType'
+        - $ref: '#/components/parameters/DataSource'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminTrainersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/trainers/{id}/status:
+    patch:
+      tags:
+        - Admin
+      summary: Update trainer status
+      description: Update trainer verification and claimed status (admin only)
+      operationId: updateTrainerStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TrainerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTrainerStatusRequest'
+      responses:
+        '200':
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTrainerStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/reviews/pending:
+    get:
+      tags:
+        - Admin
+      summary: Get pending reviews
+      description: Get list of pending reviews for moderation (admin only)
+      operationId: getPendingReviews
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/CouncilId'
+        - $ref: '#/components/parameters/MinRating'
+        - $ref: '#/components/parameters/MaxRating'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingReviewsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/reviews/{id}/moderate:
+    patch:
+      tags:
+        - Admin
+      summary: Moderate review
+      description: Approve or reject a review (admin only)
+      operationId: moderateReview
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerateReviewRequest'
+      responses:
+        '200':
+          description: Review moderated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerateReviewResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/featured/queue:
+    get:
+      tags:
+        - Admin
+      summary: Get featured queue
+      description: Get featured placement queue (admin only)
+      operationId: getFeaturedQueue
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/CouncilId'
+        - $ref: '#/components/parameters/FeaturedStatus'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeaturedQueueResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/featured/promote:
+    post:
+      tags:
+        - Admin
+      summary: Promote from queue
+      description: Promote a trainer from featured queue (admin only)
+      operationId: promoteFromQueue
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoteFromQueueRequest'
+      responses:
+        '200':
+          description: Promoted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoteFromQueueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/emergency/logs:
+    get:
+      tags:
+        - Admin
+      summary: Get emergency logs
+      description: Get emergency triage logs (admin only)
+      operationId: getEmergencyLogs
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Classification'
+        - $ref: '#/components/parameters/MinConfidence'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyLogsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/payments/audit:
+    get:
+      tags:
+        - Admin
+      summary: Get payment audit
+      description: Get payment audit logs (admin only)
+      operationId: getPaymentAudit
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/EventType'
+        - $ref: '#/components/parameters/BusinessId'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAuditResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminTrainersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/trainers/{id}/status:
+    put:
+      tags:
+        - Admin
+      summary: Update trainer status
+      description: Update trainer verification and claimed status (admin only)
+      operationId: updateTrainerStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TrainerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTrainerStatusRequest'
+      responses:
+        '200':
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTrainerStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/reviews/pending:
+    get:
+      tags:
+        - Admin
+      summary: Get pending reviews
+      description: Get list of pending reviews for moderation (admin only)
+      operationId: getPendingReviews
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/CouncilId'
+        - $ref: '#/components/parameters/MinRating'
+        - $ref: '#/components/parameters/MaxRating'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingReviewsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/reviews/{id}/moderate:
+    put:
+      tags:
+        - Admin
+      summary: Moderate review
+      description: Approve or reject a review (admin only)
+      operationId: moderateReview
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerateReviewRequest'
+      responses:
+        '200':
+          description: Review moderated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerateReviewResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/featured/queue:
+    get:
+      tags:
+        - Admin
+      summary: Get featured queue
+      description: Get featured placement queue (admin only)
+      operationId: getFeaturedQueue
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/CouncilId'
+        - $ref: '#/components/parameters/FeaturedStatus'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeaturedQueueResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/featured/promote:
+    post:
+      tags:
+        - Admin
+      summary: Promote from queue
+      description: Promote a trainer from featured queue (admin only)
+      operationId: promoteFromQueue
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoteFromQueueRequest'
+      responses:
+        '200':
+          description: Promoted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoteFromQueueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/emergency/logs:
+    get:
+      tags:
+        - Admin
+      summary: Get emergency logs
+      description: Get emergency triage logs (admin only)
+      operationId: getEmergencyLogs
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Classification'
+        - $ref: '#/components/parameters/MinConfidence'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyLogsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/payments/audit:
+    get:
+      tags:
+        - Admin
+      summary: Get payment audit
+      description: Get payment audit logs (admin only)
+      operationId: getPaymentAudit
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/EventType'
+        - $ref: '#/components/parameters/BusinessId'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAuditResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # AUTHENTICATION ENDPOINTS
+  # ============================================================================
+
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register new user
+      description: Register a new user account
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login
+      description: Authenticate user with email and password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout
+      description: Logout user and invalidate session
+      operationId: logout
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: Refresh token
+      description: Refresh access token using refresh token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/mfa/setup:
+    post:
+      tags:
+        - Auth
+      summary: Setup MFA
+      description: Setup multi-factor authentication for user
+      operationId: setupMfa
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupMfaRequest'
+      responses:
+        '200':
+          description: MFA setup initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupMfaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: Refresh token
+      description: Refresh access token using refresh token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout
+      description: Logout user and invalidate session
+      operationId: logout
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/mfa/setup:
+    post:
+      tags:
+        - Auth
+      summary: Setup MFA
+      description: Setup multi-factor authentication for user
+      operationId: setupMfa
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupMfaRequest'
+      responses:
+        '200':
+          description: MFA setup initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupMfaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/mfa/verify:
+    post:
+      tags:
+        - Auth
+      summary: Verify MFA
+      description: Verify MFA code and enable MFA
+      operationId: verifyMfa
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyMfaRequest'
+      responses:
+        '200':
+          description: MFA verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyMfaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/mfa/disable:
+    post:
+      tags:
+        - Auth
+      summary: Disable MFA
+      description: Disable multi-factor authentication for user
+      operationId: disableMfa
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisableMfaRequest'
+      responses:
+        '200':
+          description: MFA disabled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisableMfaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # WEBHOOK ENDPOINTS
+  # ============================================================================
+
+  /webhooks/stripe:
+    post:
+      tags:
+        - Webhooks
+      summary: Stripe webhook
+      description: Handle Stripe webhook events
+      operationId: stripeWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeWebhookEvent'
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+# ============================================================================
+# COMPONENTS
+# ============================================================================
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Page number for pagination
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    Limit:
+      name: limit
+      in: query
+      description: Number of items per page
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    SortBy:
+      name: sort_by
+      in: query
+      description: Field to sort by
+      required: false
+      schema:
+        type: string
+        enum: [name, created_at, rating, verified]
+
+    SortOrder:
+      name: sort_order
+      in: query
+      description: Sort order
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+
+    CouncilId:
+      name: council_id
+      in: query
+      description: Filter by council ID
+      required: false
+      schema:
+        type: string
+        format: uuid
+
+    LocalityId:
+      name: locality_id
+      in: query
+      description: Filter by locality ID
+      required: false
+      schema:
+        type: string
+        format: uuid
+
+    ResourceType:
+      name: resource_type
+      in: query
+      description: Filter by resource type
+      required: false
+      schema:
+        type: string
+        enum: [trainer, behaviour_consultant, emergency_vet, urgent_care, emergency_shelter]
+
+    AgeSpecialty:
+      name: age_specialty
+      in: query
+      description: Filter by age specialty
+      required: false
+      schema:
+        type: string
+        enum:
+          - Puppy (0–6 months)
+          - Adolescent (6–18 months)
+          - Adult (1.5–7 years)
+          - Senior (7–10 years)
+          - Any age
+
+    BehaviorIssue:
+      name: behavior_issue
+      in: query
+      description: Filter by behavior issue
+      required: false
+      schema:
+        type: string
+        enum:
+          - Pulling on lead
+          - Separation anxiety
+          - Barking
+          - Aggression
+          - Jumping up on people
+          - Recall issues
+          - Socialisation
+          - Chewing
+          - Digging
+          - House training
+          - Fear/phobias
+          - Other
+
+    ServiceType:
+      name: service_type
+      in: query
+      description: Filter by service type
+      required: false
+      schema:
+        type: string
+        enum:
+          - Puppy training
+          - Obedience training
+          - Behaviour consultations
+          - Group classes
+          - Private training
+
+    Verified:
+      name: verified
+      in: query
+      description: Filter by verified status
+      required: false
+      schema:
+        type: boolean
+
+    Claimed:
+      name: claimed
+      in: query
+      description: Filter by claimed status
+      required: false
+      schema:
+        type: boolean
+
+    Search:
+      name: search
+      in: query
+      description: Search term
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+
+    Region:
+      name: region
+      in: query
+      description: Filter by region
+      required: false
+      schema:
+        type: string
+        enum: [Inner City, Northern, Eastern, South Eastern, Western]
+
+    Postcode:
+      name: postcode
+      in: query
+      description: Filter by postcode
+      required: false
+      schema:
+        type: string
+        pattern: '^\\d{4}$'
+
+    MinRating:
+      name: min_rating
+      in: query
+      description: Minimum rating
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 5
+
+    MaxRating:
+      name: max_rating
+      in: query
+      description: Maximum rating
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 5
+
+    TrainerId:
+      name: id
+      in: path
+      description: Trainer ID
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    ReviewId:
+      name: id
+      in: path
+      description: Review ID
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    AdminStatus:
+      name: status
+      in: query
+      description: Filter by admin status
+      required: false
+      schema:
+        type: string
+        enum: [pending, verified, all]
+
+    DataSource:
+      name: data_source
+      in: query
+      description: Filter by data source
+      required: false
+      schema:
+        type: string
+        enum: [manual_form, scraped, api_import, admin_entry]
+
+    FeaturedStatus:
+      name: status
+      in: query
+      description: Filter by featured status
+      required: false
+      schema:
+        type: string
+        enum: [queued, active, expired, refunded, cancelled]
+
+    Classification:
+      name: classification
+      in: query
+      description: Filter by triage classification
+      required: false
+      schema:
+        type: string
+        enum: [medical, crisis, stray, normal]
+
+    MinConfidence:
+      name: min_confidence
+      in: query
+      description: Minimum confidence score
+      required: false
+      schema:
+        type: number
+        minimum: 0
+        maximum: 1
+
+    DateFrom:
+      name: date_from
+      in: query
+      description: Filter by date from
+      required: false
+      schema:
+        type: string
+        format: date-time
+
+    DateTo:
+      name: date_to
+      in: query
+      description: Filter by date to
+      required: false
+      schema:
+        type: string
+        format: date-time
+
+    EventType:
+      name: event_type
+      in: query
+      description: Filter by event type
+      required: false
+      schema:
+        type: string
+
+    BusinessId:
+      name: business_id
+      in: query
+      description: Filter by business ID
+      required: false
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          $ref: '#/components/schemas/ErrorResponse'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    ResponseMeta:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        request_id:
+          type: string
+        version:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+    TrainersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trainers:
+              type: array
+              items:
+                $ref: '#/components/schemas/Trainer'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    Trainer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        resource_type:
+          type: string
+          enum: [trainer, behaviour_consultant, emergency_vet, urgent_care, emergency_shelter]
+        locality_id:
+          type: string
+          format: uuid
+        council_id:
+          type: string
+          format: uuid
+        phone:
+          type: string
+        email:
+          type: string
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        age_specialties:
+          type: array
+          items:
+            type: string
+        behavior_issues:
+          type: array
+          items:
+            type: string
+        service_type_primary:
+          type: string
+          nullable: true
+        service_type_secondary:
+          type: array
+          items:
+            type: string
+          nullable: true
+        abr_abn:
+          type: string
+          nullable: true
+        emergency_phone:
+          type: string
+          nullable: true
+        emergency_hours:
+          type: string
+          nullable: true
+        emergency_services:
+          type: array
+          items:
+            type: string
+          nullable: true
+        verified:
+          type: boolean
+        claimed:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TrainerProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trainer:
+              $ref: '#/components/schemas/Trainer'
+            council:
+              $ref: '#/components/schemas/Council'
+            locality:
+              $ref: '#/components/schemas/Locality'
+            reviews:
+              type: array
+              items:
+                $ref: '#/components/schemas/Review'
+            featured:
+              $ref: '#/components/schemas/FeaturedPlacement'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    Council:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        region:
+          type: string
+          enum: [Inner City, Northern, Eastern, South Eastern, Western]
+        shire:
+          type: boolean
+        ux_label:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Locality:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        council_id:
+          type: string
+          format: uuid
+        region:
+          type: string
+          enum: [Inner City, Northern, Eastern, South Eastern, Western]
+        postcode:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        ux_label:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        business_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        moderation_status:
+          type: string
+          enum: [pending, approved, rejected]
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        rejected_at:
+          type: string
+          format: date-time
+          nullable: true
+        rejection_reason:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FeaturedPlacement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        business_id:
+          type: string
+          format: uuid
+        council_id:
+          type: string
+          format: uuid
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [queued, active, expired, refunded, cancelled]
+        queue_position:
+          type: integer
+          nullable: true
+        refund_reason:
+          type: string
+          nullable: true
+        refunded_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TrainerReviewsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            reviews:
+              type: array
+              items:
+                $ref: '#/components/schemas/Review'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+            trainer_id:
+              type: string
+              format: uuid
+            average_rating:
+              type: number
+            total_reviews:
+              type: integer
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CouncilsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            councils:
+              type: array
+              items:
+                $ref: '#/components/schemas/Council'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+            regions:
+              type: array
+              items:
+                type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SuburbsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            suburbs:
+              type: array
+              items:
+                $ref: '#/components/schemas/Locality'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+            council_id:
+              type: string
+              format: uuid
+            region:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    ServicesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            services:
+              type: array
+              items:
+                type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    IssuesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            issues:
+              type: array
+              items:
+                type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    AgeGroupsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            age_groups:
+              type: array
+              items:
+                type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    EmergencyTriageRequest:
+      type: object
+      required:
+        - user_message
+      properties:
+        user_message:
+          type: string
+          minLength: 10
+          maxLength: 1000
+        location:
+          type: object
+          properties:
+            council_id:
+              type: string
+              format: uuid
+            locality_id:
+              type: string
+              format: uuid
+
+    EmergencyTriageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            classification:
+              type: string
+              enum: [medical, crisis, stray, normal]
+            confidence_score:
+              type: number
+              minimum: 0
+              maximum: 1
+            ai_response:
+              type: string
+            emergency_contacts:
+              type: array
+              items:
+                $ref: '#/components/schemas/EmergencyContact'
+            triage_id:
+              type: string
+              format: uuid
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    EmergencyContact:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        resource_type:
+          type: string
+          enum: [trainer, behaviour_consultant, emergency_vet, urgent_care, emergency_shelter]
+        locality_id:
+          type: string
+          format: uuid
+        council_id:
+          type: string
+          format: uuid
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        emergency_phone:
+          type: string
+          nullable: true
+        emergency_hours:
+          type: string
+          nullable: true
+        emergency_services:
+          type: array
+          items:
+            type: string
+          nullable: true
+        verified:
+          type: boolean
+        claimed:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EmergencyContactsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            contacts:
+              type: array
+              items:
+                $ref: '#/components/schemas/EmergencyContact'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CreateTrainerProfileRequest:
+      type: object
+      required:
+        - name
+        - locality_id
+        - council_id
+        - phone
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 200
+        locality_id:
+          type: string
+          format: uuid
+        council_id:
+          type: string
+          format: uuid
+        phone:
+          type: string
+          pattern: '^(\\+61|0)?[4]\\d{8}$'
+        email:
+          type: string
+          format: email
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          nullable: true
+        age_specialties:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 5
+        behavior_issues:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 10
+        service_type_primary:
+          type: string
+          nullable: true
+        service_type_secondary:
+          type: array
+          items:
+            type: string
+          maxItems: 4
+          nullable: true
+        abr_abn:
+          type: string
+          pattern: '^\\d{11}$'
+          nullable: true
+        emergency_phone:
+          type: string
+          pattern: '^(\\+61|0)?[4]\\d{8}$'
+          nullable: true
+        emergency_hours:
+          type: string
+          maxLength: 200
+          nullable: true
+        emergency_services:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+          nullable: true
+
+    UpdateTrainerProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 200
+        phone:
+          type: string
+          pattern: '^(\\+61|0)?[4]\\d{8}$'
+        email:
+          type: string
+          format: email
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          nullable: true
+        age_specialties:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 5
+        behavior_issues:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 10
+        service_type_primary:
+          type: string
+          nullable: true
+        service_type_secondary:
+          type: array
+          items:
+            type: string
+          maxItems: 4
+          nullable: true
+        abr_abn:
+          type: string
+          pattern: '^\\d{11}$'
+          nullable: true
+        emergency_phone:
+          type: string
+          pattern: '^(\\+61|0)?[4]\\d{8}$'
+          nullable: true
+        emergency_hours:
+          type: string
+          maxLength: 200
+          nullable: true
+        emergency_services:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+          nullable: true
+
+    TrainerOwnProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trainer:
+              $ref: '#/components/schemas/Trainer'
+            featured:
+              $ref: '#/components/schemas/FeaturedPlacement'
+            stats:
+              type: object
+              properties:
+                total_reviews:
+                  type: integer
+                average_rating:
+                  type: number
+                featured_status:
+                  type: string
+                  enum: [queued, active, expired, refunded, cancelled]
+                  nullable: true
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    AddServiceRequest:
+      type: object
+      required:
+        - service_type
+      properties:
+        service_type:
+          type: string
+          enum:
+            - Puppy training
+            - Obedience training
+            - Behaviour consultations
+            - Group classes
+            - Private training
+        is_primary:
+          type: boolean
+          default: false
+
+    AddServiceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trainer:
+              $ref: '#/components/schemas/Trainer'
+            added_service:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    RemoveServiceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trainer:
+              $ref: '#/components/schemas/Trainer'
+            removed_service:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    AddIssueRequest:
+      type: object
+      required:
+        - behavior_issue
+      properties:
+        behavior_issue:
+          type: string
+          enum:
+            - Pulling on lead
+            - Separation anxiety
+            - Barking
+            - Aggression
+            - Jumping up on people
+            - Recall issues
+            - Socialisation
+            - Chewing
+            - Digging
+            - House training
+            - Fear/phobias
+            - Other
+
+    AddIssueResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trainer:
+              $ref: '#/components/schemas/Trainer'
+            added_issue:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    RemoveIssueResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trainer:
+              $ref: '#/components/schemas/Trainer'
+            removed_issue:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    PurchaseFeaturedRequest:
+      type: object
+      required:
+        - council_id
+        - duration_days
+        - payment_method_id
+      properties:
+        council_id:
+          type: string
+          format: uuid
+        duration_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+        payment_method_id:
+          type: string
+          minLength: 1
+
+    PurchaseFeaturedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            featured_placement:
+              $ref: '#/components/schemas/FeaturedPlacement'
+            payment_intent_id:
+              type: string
+            client_secret:
+              type: string
+            amount:
+              type: integer
+            currency:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    FeaturedStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            featured:
+              $ref: '#/components/schemas/FeaturedPlacement'
+            queue_position:
+              type: integer
+              nullable: true
+            can_purchase:
+              type: boolean
+            next_available_date:
+              type: string
+              format: date-time
+              nullable: true
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    AdminTrainersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trainers:
+              type: array
+              items:
+                $ref: '#/components/schemas/Trainer'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+            filters:
+              type: object
+              properties:
+                status:
+                  type: string
+                council_id:
+                  type: string
+                  format: uuid
+                resource_type:
+                  type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    UpdateTrainerStatusRequest:
+      type: object
+      properties:
+        verified:
+          type: boolean
+        claimed:
+          type: boolean
+        status_reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+
+    UpdateTrainerStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trainer:
+              $ref: '#/components/schemas/Trainer'
+            previous_status:
+              type: object
+              properties:
+                verified:
+                  type: boolean
+                claimed:
+                  type: boolean
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    PendingReviewsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            reviews:
+              type: array
+              items:
+                type: object
+                properties:
+                  review:
+                    $ref: '#/components/schemas/Review'
+                  business:
+                    $ref: '#/components/schemas/Trainer'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    ModerateReviewRequest:
+      type: object
+      required:
+        - moderation_status
+      properties:
+        moderation_status:
+          type: string
+          enum: [pending, approved, rejected]
+        rejection_reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+
+    ModerateReviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            review:
+              $ref: '#/components/schemas/Review'
+            previous_status:
+              type: string
+              enum: [pending, approved, rejected]
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    FeaturedQueueResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            placements:
+              type: array
+              items:
+                type: object
+                properties:
+                  featured_placement:
+                    $ref: '#/components/schemas/FeaturedPlacement'
+                  business:
+                    $ref: '#/components/schemas/Trainer'
+                  council:
+                    $ref: '#/components/schemas/Council'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    PromoteFromQueueRequest:
+      type: object
+      required:
+        - featured_placement_id
+      properties:
+        featured_placement_id:
+          type: string
+          format: uuid
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+
+    PromoteFromQueueResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            featured_placement:
+              $ref: '#/components/schemas/FeaturedPlacement'
+            queue_updates:
+              type: array
+              items:
+                $ref: '#/components/schemas/FeaturedPlacement'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    EmergencyLogsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            logs:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  user_message:
+                    type: string
+                  classification:
+                    type: string
+                    enum: [medical, crisis, stray, normal]
+                  confidence_score:
+                    type: number
+                  ai_response:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                    format: date-time
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    PaymentAuditResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            audits:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  stripe_event_id:
+                    type: string
+                  event_type:
+                    type: string
+                  payload:
+                    type: object
+                  processed_at:
+                    type: string
+                    format: date-time
+                  created_at:
+                    type: string
+                    format: date-time
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            has_more:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - phone
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        phone:
+          type: string
+          pattern: '^(\\+61|0)?[4]\\d{8}$'
+        role:
+          type: string
+          enum: [admin, trainer, user]
+          default: user
+
+    RegisterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [admin, trainer, user]
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        mfa_code:
+          type: string
+          pattern: '^\\d{6}$'
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [admin, trainer, user]
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            requires_mfa:
+              type: boolean
+            mfa_method:
+              type: string
+              enum: [totp, otp]
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [admin, trainer, user]
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    LogoutRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+
+    LogoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    SetupMfaRequest:
+      type: object
+      required:
+        - method
+      properties:
+        method:
+          type: string
+          enum: [totp, otp]
+
+    SetupMfaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            secret:
+              type: string
+            qr_code_url:
+              type: string
+              format: uri
+            backup_codes:
+              type: array
+              items:
+                type: string
+            method:
+              type: string
+              enum: [totp, otp]
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    VerifyMfaRequest:
+      type: object
+      required:
+        - code
+        - method
+      properties:
+        code:
+          type: string
+          pattern: '^\\d{6}$'
+        method:
+          type: string
+          enum: [totp, otp]
+
+    VerifyMfaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    DisableMfaRequest:
+      type: object
+      required:
+        - code
+        - method
+      properties:
+        code:
+          type: string
+          pattern: '^\\d{6}$'
+        method:
+          type: string
+          enum: [totp, otp]
+
+    DisableMfaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    StripeWebhookEvent:
+      type: object
+      required:
+        - id
+        - object
+        - api_version
+        - created
+        - data
+        - type
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          enum: [event]
+        api_version:
+          type: string
+        created:
+          type: integer
+        data:
+          type: object
+          properties:
+            object:
+              type: object
+        type:
+          type: string
+
+    WebhookResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            received:
+              type: boolean
+            event_id:
+              type: string
+            processed:
+              type: boolean
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

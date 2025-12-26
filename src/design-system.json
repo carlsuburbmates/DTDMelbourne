@@ -1,0 +1,423 @@
+{
+  "name": "Dog Trainers Directory Design System",
+  "version": "1.0.0",
+  "description": "Premium, mobile-first design system for Dog Trainers Directory",
+  "principles": {
+    "mobile_first": "Define layouts for mobile base classes first, then adapt for desktop using 'md:' classes",
+    "one_primary_action": "Every screen/section must have only one high-contrast primary action. All others are secondary (ghost/outline) or tertiary (text link)",
+    "spacing_is_trust": "Use a 'Generous' spacing scale. Tight margins feel cheap. White space is a luxury material. Default to 80px-120px padding between major sections",
+    "motion_is_meaning": "No random bounces. Motion must confirm user intent (e.g., button scale-down on click, subtle lift on hover)",
+    "no_vibes": "Do not use words like 'modern' or 'sleek.' Define specific values (e.g., 'border-radius: 12px', 'font-weight: 500')"
+  },
+  "color_palette": {
+    "surface": {
+      "off_white": "#FAFAFA",
+      "rich_black": "#0A0A0A"
+    },
+    "primary": {
+      "brand": "#2563EB",
+      "brand_hover": "#1D4ED8",
+      "brand_active": "#1E40AF"
+    },
+    "neutral": {
+      "slate_50": "#F8FAFC",
+      "slate_100": "#F1F5F9",
+      "slate_200": "#E2E8F0",
+      "slate_300": "#CBD5E1",
+      "slate_400": "#94A3B8",
+      "slate_500": "#64748B",
+      "slate_600": "#475569",
+      "slate_700": "#334155",
+      "slate_800": "#1E293B",
+      "slate_900": "#0F172A"
+    },
+    "semantic": {
+      "success": "#10B981",
+      "success_light": "#D1FAE5",
+      "error": "#EF4444",
+      "error_light": "#FEE2E2",
+      "warning": "#F59E0B",
+      "warning_light": "#FEF3C7",
+      "info": "#3B82F6",
+      "info_light": "#DBEAFE"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "primary": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      "heading": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      "body": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      "caption": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    },
+    "font_sizes": {
+      "h1": "32px",
+      "h1_mobile": "24px",
+      "h2": "24px",
+      "h2_mobile": "20px",
+      "h3": "20px",
+      "h3_mobile": "18px",
+      "body": "16px",
+      "body_small": "14px",
+      "caption": "12px"
+    },
+    "font_weights": {
+      "regular": "400",
+      "medium": "500",
+      "semibold": "600",
+      "bold": "700"
+    },
+    "line_heights": {
+      "tight": "1.2",
+      "normal": "1.5",
+      "relaxed": "1.6"
+    },
+    "letter_spacing": {
+      "heading_tight": "-0.02em",
+      "normal": "0",
+      "wide": "0.01em"
+    }
+  },
+  "spacing": {
+    "scale": [4, 8, 16, 24, 32, 64, 128],
+    "tokens": {
+      "xs": "4px",
+      "sm": "8px",
+      "md": "16px",
+      "lg": "24px",
+      "xl": "32px",
+      "2xl": "64px",
+      "3xl": "128px"
+    },
+    "section_padding": {
+      "mobile": "24px",
+      "tablet": "48px",
+      "desktop": "80px"
+    },
+    "component_padding": {
+      "tight": "8px",
+      "normal": "16px",
+      "generous": "24px"
+    }
+  },
+  "grid": {
+    "columns": 12,
+    "gutter": "16px",
+    "max_width": {
+      "mobile": "100%",
+      "tablet": "768px",
+      "desktop": "1200px"
+    },
+    "breakpoints": {
+      "mobile": "0px",
+      "tablet": "768px",
+      "desktop": "1024px",
+      "wide": "1280px"
+    }
+  },
+  "border_radius": {
+    "none": "0px",
+    "sm": "4px",
+    "md": "8px",
+    "lg": "12px",
+    "xl": "16px",
+      "full": "9999px"
+  },
+  "shadows": {
+    "none": "none",
+    "subtle": "0 1px 2px rgba(0, 0, 0, 0.05)",
+    "medium": "0 4px 6px rgba(0, 0, 0, 0.07)",
+    "elevated": "0 10px 15px rgba(0, 0, 0, 0.1)",
+    "hover": "0 2px 4px rgba(0, 0, 0, 0.08)"
+  },
+  "components": {
+    "button": {
+      "height": "48px",
+      "padding_horizontal": "24px",
+      "border_radius": "8px",
+      "font_weight": "500",
+      "font_size": "16px",
+      "transition": "all 200ms cubic-bezier(0.4, 0, 0.2, 1)",
+      "variants": {
+        "primary": {
+          "background": "#2563EB",
+          "color": "#FFFFFF",
+          "hover": {
+            "background": "#1D4ED8",
+            "transform": "translateY(-1px)"
+          },
+          "active": {
+            "background": "#1E40AF",
+            "transform": "translateY(0)"
+          },
+          "disabled": {
+            "background": "#94A3B8",
+            "opacity": "0.5"
+          }
+        },
+        "secondary": {
+          "background": "transparent",
+          "color": "#2563EB",
+          "border": "2px solid #2563EB",
+          "hover": {
+            "background": "#EFF6FF",
+            "transform": "translateY(-1px)"
+          },
+          "active": {
+            "background": "#DBEAFE",
+            "transform": "translateY(0)"
+          }
+        },
+        "ghost": {
+          "background": "transparent",
+          "color": "#475569",
+          "hover": {
+            "background": "#F1F5F9",
+            "color": "#1E293B"
+          },
+          "active": {
+            "background": "#E2E8F0",
+            "color": "#0F172A"
+          }
+        },
+        "tertiary": {
+          "background": "transparent",
+          "color": "#64748B",
+          "text_decoration": "underline",
+          "hover": {
+            "color": "#2563EB"
+          }
+        }
+      }
+    },
+    "card": {
+      "background": "#FFFFFF",
+      "border": "1px solid rgba(0, 0, 0, 0.1)",
+      "border_radius": "12px",
+      "padding": "24px",
+      "shadow": "0 1px 2px rgba(0, 0, 0, 0.05)",
+      "hover": {
+        "shadow": "0 2px 4px rgba(0, 0, 0, 0.08)",
+        "transform": "translateY(-2px)"
+      }
+    },
+    "input": {
+      "height": "48px",
+      "padding_horizontal": "16px",
+      "border_radius": "8px",
+      "font_size": "16px",
+      "variants": {
+        "underline": {
+          "background": "transparent",
+          "border": "none",
+          "border_bottom": "2px solid #E2E8F0",
+          "focus": {
+            "border_bottom": "2px solid #2563EB"
+          }
+        },
+        "filled": {
+          "background": "#F1F5F9",
+          "border": "none",
+          "focus": {
+            "background": "#FFFFFF",
+            "border": "2px solid #2563EB",
+            "box_shadow": "0 0 0 4px rgba(37, 99, 235, 0.1)"
+          }
+        }
+      }
+    },
+    "badge": {
+      "padding_horizontal": "8px",
+      "padding_vertical": "4px",
+      "border_radius": "4px",
+      "font_size": "12px",
+      "font_weight": "600",
+      "variants": {
+        "featured": {
+          "background": "#F59E0B",
+          "color": "#FFFFFF"
+        },
+        "verified": {
+          "background": "#10B981",
+          "color": "#FFFFFF"
+        },
+        "new": {
+          "background": "#3B82F6",
+          "color": "#FFFFFF"
+        }
+      }
+    },
+    "rating": {
+      "star_size": "16px",
+      "star_color": "#F59E0B",
+      "star_empty": "#E2E8F0",
+      "star_half": "#FBBF24"
+    }
+  },
+  "micro_interactions": {
+    "duration": {
+      "fast": "150ms",
+      "normal": "200ms",
+      "slow": "300ms"
+    },
+    "easing": {
+      "ease_out": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "ease_in_out": "cubic-bezier(0.4, 0, 0.6, 1)",
+      "spring": "cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+    },
+    "hover": {
+      "button": {
+        "transform": "translateY(-1px)",
+        "shadow": "0 2px 4px rgba(0, 0, 0, 0.08)"
+      },
+      "card": {
+        "transform": "translateY(-2px)",
+        "shadow": "0 4px 8px rgba(0, 0, 0, 0.1)"
+      }
+    },
+    "click": {
+      "button": {
+        "transform": "scale(0.95)"
+      }
+    }
+  },
+  "accessibility": {
+    "focus_ring": {
+      "width": "2px",
+      "offset": "2px",
+      "color": "#2563EB",
+      "radius": "4px"
+    },
+    "skip_links": {
+      "background": "#2563EB",
+      "color": "#FFFFFF",
+      "padding": "8px 16px",
+      "border_radius": "4px"
+    },
+    "contrast_ratios": {
+      "aa": "4.5:1",
+      "aaa": "7:1"
+    }
+  },
+  "responsive": {
+    "mobile_first": true,
+    "breakpoints": {
+      "mobile": "0px - 767px",
+      "tablet": "768px - 1023px",
+      "desktop": "1024px - 1279px",
+      "wide": "1280px+"
+    },
+    "navigation": {
+      "mobile": {
+        "type": "hamburger_menu",
+        "position": "fixed_bottom"
+      },
+      "desktop": {
+        "type": "horizontal_nav",
+        "position": "sticky_top"
+      }
+    }
+  },
+  "empty_states": {
+    "search": {
+      "icon": "🔍",
+      "title": "No trainers found",
+      "message": "Try adjusting your filters or search terms",
+      "action": "Clear all filters"
+    },
+    "reviews": {
+      "icon": "⭐",
+      "title": "No reviews yet",
+      "message": "Be the first to review this trainer",
+      "action": "Write a review"
+    },
+    "queue": {
+      "icon": "📋",
+      "title": "Queue is empty",
+      "message": "No trainers currently in the featured queue",
+      "action": "Join the queue"
+    }
+  },
+  "loading_states": {
+    "skeleton": {
+      "background": "#E2E8F0",
+      "border_radius": "8px",
+      "animation": "pulse 1.5s ease-in-out infinite"
+    },
+    "spinner": {
+      "size": "32px",
+      "border_width": "3px",
+      "color": "#2563EB"
+    }
+  },
+  "visual_hierarchy": {
+    "featured_badge": {
+      "position": "top_right",
+      "background": "#F59E0B",
+      "color": "#FFFFFF",
+      "text": "FEATURED"
+    },
+    "verified_checkmark": {
+      "icon": "✓",
+      "background": "#10B981",
+      "color": "#FFFFFF",
+      "border_radius": "full"
+    },
+    "rating_stars": {
+      "display": "inline",
+      "spacing": "2px"
+    }
+  },
+  "forms": {
+    "validation": {
+      "error": {
+        "color": "#EF4444",
+        "background": "#FEE2E2",
+        "border_radius": "4px",
+        "padding": "8px 12px"
+      },
+      "success": {
+        "color": "#065F46",
+        "background": "#D1FAE5",
+        "border_radius": "4px",
+        "padding": "8px 12px"
+      }
+    },
+    "labels": {
+      "required": {
+        "indicator": "*",
+        "color": "#EF4444"
+      }
+    }
+  },
+  "error_pages": {
+    "404": {
+      "title": "Page not found",
+      "message": "The page you're looking for doesn't exist",
+      "action": "Go to homepage"
+    },
+    "500": {
+      "title": "Something went wrong",
+      "message": "We're experiencing technical difficulties",
+      "action": "Try again"
+    },
+    "429": {
+      "title": "Too many requests",
+      "message": "Please wait a moment before trying again",
+      "action": "Go back"
+    }
+  },
+  "dark_mode": {
+    "enabled": false,
+    "color_palette": {
+      "surface": {
+        "off_white": "#1E293B",
+        "rich_black": "#FAFAFA"
+      },
+      "primary": {
+        "brand": "#60A5FA",
+        "brand_hover": "#93C5FD",
+        "brand_active": "#3B82F6"
+      }
+    }
+  }
+}

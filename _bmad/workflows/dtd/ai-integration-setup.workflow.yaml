@@ -1,0 +1,141 @@
+---
+name: ai-integration-setup
+description: DTD AI Integration Setup Workflow - Configure Z.AI client, z.ai fallback, deterministic classifier rules, cascade logic, feature flags, health monitoring, audit logging, and test scenarios
+web_bundle: true
+---
+
+# AI Integration Setup Workflow
+
+**Goal:** Implement complete AI integration for Dog Trainers Directory including Z.AI client configuration, z.ai fallback, deterministic classifier rules, cascade logic, feature flags, health monitoring, audit logging, and comprehensive test scenarios.
+
+**Your Role:** In addition to your name, communication_style, and persona, you are also an AI integration specialist and machine learning engineer collaborating with DTD Developer. This is a partnership, not a client-vendor relationship. You bring expertise in AI/ML integration, Z.AI and z.ai APIs, deterministic systems, and production AI deployment, while the user brings their domain knowledge of dog trainers directory requirements. Work together as equals.
+
+---
+
+## WORKFLOW ARCHITECTURE
+
+This uses **step-file architecture** for disciplined execution:
+
+### Core Principles
+
+- **Micro-file Design**: Each step is a self contained instruction file that is a part of an overall workflow that must be followed exactly
+- **Just-In-Time Loading**: Only current step file is in memory - never load future step files until told to do so
+- **Sequential Enforcement**: Sequence within the step files must be completed in order, no skipping or optimization allowed
+- **State Tracking**: Document progress in output file frontmatter using `stepsCompleted` array when a workflow produces a document
+- **Append-Only Building**: Build documents by appending content as directed to the output file
+
+### Step Processing Rules
+
+1. **READ COMPLETELY**: Always read entire step file before taking any action
+2. **FOLLOW SEQUENCE**: Execute all numbered sections in order, never deviate
+3. **WAIT FOR INPUT**: If a menu is presented, halt and wait for user selection
+4. **CHECK CONTINUATION**: If step has a menu with Continue as an option, only proceed to next step when user selects 'C' (Continue)
+5. **SAVE STATE**: Update `stepsCompleted` in frontmatter before loading next step
+6. **LOAD NEXT**: When directed, load, read entire file, then execute the next step file
+
+### Critical Rules (NO EXCEPTIONS)
+
+- 🛑 **NEVER** load multiple step files simultaneously
+- 📖 **ALWAYS** read entire step file before execution
+- 🚫 **NEVER** skip steps or optimize the sequence
+- 💾 **ALWAYS** update frontmatter of output files when writing final output for a specific step
+- 🎯 **ALWAYS** follow exact instructions in step file
+- ⏸️ **ALWAYS** halt at menus and wait for user input
+- 📋 **NEVER** create mental todo lists from future steps
+
+---
+
+## INITIALIZATION SEQUENCE
+
+### 1. Configuration Loading
+
+Load and read full config from {project-root}/_bmad/bmb/config.yaml and resolve:
+
+- `project_name`, `output_folder`, `user_name`, `communication_language`, `document_output_language`, `bmb_creations_output_folder`
+
+### 2. First Step EXECUTION
+
+Load, read full file and then execute `{workflow_path}/steps/step-01-configure-zai.md` to begin workflow.
+
+---
+
+## WORKFLOW OVERVIEW
+
+### Target Agent
+- **Agent**: AI Integration Specialist (Expert)
+- **Agent Path**: `_bmad/agents/expert/ai-integration-specialist.agent.yaml`
+
+### Workflow Steps (8 Total)
+
+1. **Configure Z.AI Client** - Set up Z.AI client with proper authentication and configuration
+2. **Set Up z.ai Fallback** - Implement z.ai as fallback provider
+3. **Implement Deterministic Classifier Rules** - Create deterministic classification logic
+4. **Create Cascade Logic** - Implement provider cascade and failover
+5. **Configure Feature Flags** - Set up feature flags for AI capabilities
+6. **Set Up Health Monitoring** - Implement health checks and monitoring
+7. **Implement Audit Logging** - Create comprehensive audit logging
+8. **Create Test Scenarios** - Develop 80+ test scenarios
+
+### Output Location
+- **Workflow File**: `_bmad/workflows/dtd/ai-integration-setup.workflow.yaml`
+- **Output Directory**: `DOCS/ai/`
+
+### DTD Project Context
+- **Technology Stack**: Next.js 15, TypeScript, Tailwind CSS, Supabase, Stripe, Z.AI, z.ai, Vercel
+- **Documentation Path**: `DOCS/`
+- **User Name**: "DTD Developer"
+- **Communication Language**: "English"
+
+---
+
+## WORKFLOW EXECUTION
+
+This workflow will guide you through creating a complete AI integration for Dog Trainers Directory. Each step builds upon the previous one, ensuring a robust, reliable, and production-ready AI system.
+
+### Prerequisites
+- API contract implemented (API Contract Implementation Workflow completed)
+- Database schema implemented (Database Schema Implementation Workflow completed)
+- Z.AI API credentials available
+- z.ai API credentials available
+- Next.js 15 project structure established
+
+### Expected Deliverables
+- Z.AI client configured and tested
+- z.ai fallback implementation
+- Deterministic classifier rules for all classification tasks
+- Cascade logic with automatic failover
+- Feature flags for AI capabilities
+- Health monitoring system
+- Comprehensive audit logging
+- 80+ test scenarios covering all AI functionality
+
+---
+
+## STEP FILES
+
+The workflow consists of the following step files located in `steps/` subdirectory:
+
+- `step-01-configure-zai.md` - Configure Z.AI client
+- `step-02-openai-fallback.md` - Set up z.ai fallback
+- `step-03-deterministic-rules.md` - Implement deterministic classifier rules
+- `step-04-cascade-logic.md` - Create cascade logic
+- `step-05-feature-flags.md` - Configure feature flags
+- `step-06-health-monitoring.md` - Set up health monitoring
+- `step-07-audit-logging.md` - Implement audit logging
+- `step-08-test-scenarios.md` - Create 80+ test scenarios
+
+---
+
+## COMPLETION CRITERIA
+
+Workflow is complete when:
+1. Z.AI client is configured with proper authentication
+2. z.ai fallback is implemented and tested
+3. Deterministic classifier rules cover all classification tasks
+4. Cascade logic handles provider failover automatically
+5. Feature flags control all AI capabilities
+6. Health monitoring provides real-time status
+7. Audit logging captures all AI interactions
+8. 80+ test scenarios are created and documented
+9. All AI integrations are documented in `DOCS/ai/`
+10. Integration with API contract and database schema is verified
