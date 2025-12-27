@@ -10,6 +10,7 @@ import type { FeaturedPlacement } from '../types/database';
 
 const FEATURED_DURATION_DAYS = 30;
 const FEATURED_PRICE_CENTS = 1500;
+const FEATURED_ACTIVE_CAP = 5;
 
 // ============================================================================
 // TYPES
@@ -99,6 +100,11 @@ export async function promoteFromQueue(
   councilId: string
 ): Promise<FeaturedPlacement | null> {
   try {
+    const activeCount = await getActiveFeaturedCount(councilId);
+    if (activeCount >= FEATURED_ACTIVE_CAP) {
+      return null;
+    }
+
     // Get next trainer in queue for this council
     const { data: nextPlacement, error: fetchError } = await supabaseAdmin
       .from('featured_placements')
@@ -218,6 +224,38 @@ export async function getQueueLength(councilId?: string): Promise<number> {
     logError(error, { context: 'getQueueLength', councilId });
     throw error;
   }
+}
+
+/**
+ * Get active featured count for a council (cap enforcement)
+ */
+export async function getActiveFeaturedCount(councilId: string): Promise<number> {
+  try {
+    const nowIso = new Date().toISOString();
+    const { count, error } = await supabaseAdmin
+      .from('featured_placements')
+      .select('id', { count: 'exact', head: true })
+      .eq('council_id', councilId)
+      .eq('status', 'active')
+      .gt('ends_at', nowIso);
+
+    if (error) {
+      throw new Error('Failed to get active featured count');
+    }
+
+    return count || 0;
+  } catch (error) {
+    logError(error, { context: 'getActiveFeaturedCount', councilId });
+    throw error;
+  }
+}
+
+/**
+ * Check if featured cap is reached for a council
+ */
+export async function isFeaturedCapReached(councilId: string): Promise<boolean> {
+  const activeCount = await getActiveFeaturedCount(councilId);
+  return activeCount >= FEATURED_ACTIVE_CAP;
 }
 
 /**

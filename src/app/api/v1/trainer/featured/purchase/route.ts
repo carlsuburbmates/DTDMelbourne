@@ -20,6 +20,7 @@ import {
 } from '@/lib/errors';
 import { RateLimiters, getClientIp, checkRateLimitOrThrow, formatRateLimitHeaders } from '@/lib/rate-limit';
 import { createFeaturedCheckoutSession } from '@/lib/stripe';
+import { isFeaturedCapReached } from '@/lib/featured-queue';
 import type { PurchaseFeaturedRequest } from '@/types/api';
 
 /**
@@ -78,6 +79,11 @@ export async function POST(request: NextRequest) {
 
     if (existingPlacement) {
       throw new BadRequestError('Featured placement already active or queued');
+    }
+
+    const capReached = await isFeaturedCapReached(existingProfile.council_id.toString());
+    if (capReached) {
+      throw new BadRequestError('Featured cap reached for this council');
     }
 
     const appUrl = process.env.APP_URL || 'http://localhost:3000';

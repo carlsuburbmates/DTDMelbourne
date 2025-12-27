@@ -7,6 +7,7 @@
 import Stripe from 'stripe';
 import { supabaseAdmin } from './auth';
 import { handleStripeError, logError } from './errors';
+import { addToQueue, isFeaturedCapReached } from './featured-queue';
 import type { FeaturedPlacement, PaymentAudit } from '../types/database';
 
 // ============================================================================
@@ -260,6 +261,12 @@ async function processFeaturedCheckout(
       return;
     }
 
+    const capReached = await isFeaturedCapReached(councilId);
+    if (capReached) {
+      await addToQueue(businessId, councilId, session.payment_intent as string);
+      return;
+    }
+
     const startsAt = new Date();
     const endsAt = new Date();
     endsAt.setDate(endsAt.getDate() + FEATURED_DURATION_DAYS);
@@ -272,7 +279,8 @@ async function processFeaturedCheckout(
       currency: 'AUD',
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
-      status: 'queued',
+      status: 'active',
+      queue_activated_at: startsAt.toISOString(),
     });
 
     if (error) {
