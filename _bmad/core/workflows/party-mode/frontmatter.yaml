@@ -1,9 +1,0 @@
----
-stepsCompleted: [1, 2]
-workflowType: 'party-mode'
-user_name: 'DTD Developer'
-date: '2025-12-25T13:32:57.744Z'
-agents_loaded: true
-party_active: false
-exit_triggers: ['*exit', 'goodbye', 'end party', 'quit']
----
