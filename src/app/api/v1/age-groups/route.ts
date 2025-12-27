@@ -18,11 +18,11 @@ export async function GET(request: NextRequest) {
 
     // Return age groups list
     const ageGroups = [
-      'Puppy (0–6 months)',
-      'Adolescent (6–18 months)',
-      'Adult (1.5–7 years)',
-      'Senior (7–10 years)',
-      'Any age',
+      'Puppies (0–6m)',
+      'Adolescent (6–18m)',
+      'Adult (18m–7y)',
+      'Senior (7y+)',
+      'Rescue',
     ];
 
     // Return response

@@ -113,7 +113,7 @@ export default function AboutPage() {
                 </p>
                 <p className="text-[16px] text-neutral-600 leading-relaxed">
                   We knew there had to be a better way. A platform where you could easily search for trainers in your area, 
-                  read genuine reviews from other dog owners, compare services and specialties, and book with confidence—all in one place.
+                  read genuine reviews from other dog owners, compare services and specialties, and book with clarity—all in one place.
                 </p>
                 <p className="text-[16px] text-neutral-600 leading-relaxed">
                   Today, we're proud to serve dog owners across Melbourne, connecting them with verified trainers who share our passion 

@@ -21,8 +21,8 @@ export const initialSchema = createMigration(
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
   );
 
-  -- Localities (suburbs) table
-  CREATE TABLE IF NOT EXISTS localities (
+  -- Suburbs table
+  CREATE TABLE IF NOT EXISTS suburbs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     council_id UUID NOT NULL REFERENCES councils(id) ON DELETE CASCADE,
@@ -40,8 +40,10 @@ export const initialSchema = createMigration(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
     resource_type VARCHAR(50) NOT NULL CHECK (resource_type IN ('trainer', 'behaviour_consultant', 'emergency_vet', 'urgent_care', 'emergency_shelter')),
-    locality_id UUID NOT NULL REFERENCES localities(id) ON DELETE CASCADE,
+    suburb_id UUID NOT NULL REFERENCES suburbs(id) ON DELETE CASCADE,
     council_id UUID NOT NULL REFERENCES councils(id) ON DELETE CASCADE,
+    region VARCHAR(50) NOT NULL CHECK (region IN ('Inner City', 'Northern', 'Eastern', 'South Eastern', 'Western')),
+    address VARCHAR(255),
     phone VARCHAR(20) NOT NULL CHECK (phone ~ '^(\\+61|0)?[4]\\d{8}$'),
     email VARCHAR(255),
     website TEXT,
@@ -50,13 +52,14 @@ export const initialSchema = createMigration(
     behavior_issues TEXT[] CHECK (array_length(behavior_issues, 1) BETWEEN 1 AND 10),
     service_type_primary VARCHAR(100),
     service_type_secondary TEXT[] CHECK (array_length(service_type_secondary, 1) <= 4),
-    abr_abn VARCHAR(11) CHECK (abr_abn ~ '^\\d{11}$'),
+    abn VARCHAR(11) CHECK (abn ~ '^\\d{11}$'),
+    abn_verified BOOLEAN DEFAULT FALSE,
     emergency_phone VARCHAR(20),
     emergency_hours VARCHAR(200),
     emergency_services TEXT[] CHECK (array_length(emergency_services, 1) <= 5),
-    verified BOOLEAN DEFAULT FALSE,
     claimed BOOLEAN DEFAULT FALSE,
     data_source VARCHAR(50) DEFAULT 'manual_form' CHECK (data_source IN ('manual_form', 'scraped', 'api_import', 'admin_entry')),
+    tier VARCHAR(20) DEFAULT 'basic' CHECK (tier IN ('basic', 'pro')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
   );
@@ -81,12 +84,34 @@ export const initialSchema = createMigration(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     council_id UUID NOT NULL REFERENCES councils(id) ON DELETE CASCADE,
-    start_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    status VARCHAR(20) DEFAULT 'queued' CHECK (status IN ('queued', 'active', 'expired', 'refunded', 'cancelled')),
+    starts_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    ends_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    status VARCHAR(20) DEFAULT 'queued' CHECK (status IN ('queued', 'active', 'expired', 'cancelled')),
     queue_position INTEGER,
-    refund_reason TEXT,
-    refunded_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  );
+
+  -- ABN verifications table
+  CREATE TABLE IF NOT EXISTS abn_verifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    abn VARCHAR(11) NOT NULL CHECK (abn ~ '^\\d{11}$'),
+    status VARCHAR(50) NOT NULL,
+    verified BOOLEAN DEFAULT FALSE,
+    matched_json JSONB,
+    checked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  );
+
+  -- Subscriptions table
+  CREATE TABLE IF NOT EXISTS subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    tier VARCHAR(20) NOT NULL CHECK (tier IN ('basic', 'pro')),
+    status VARCHAR(50) NOT NULL,
+    current_period_end TIMESTAMP WITH TIME ZONE NOT NULL,
+    stripe_subscription_id VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
   );
@@ -96,10 +121,8 @@ export const initialSchema = createMigration(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_message TEXT NOT NULL,
     classification VARCHAR(20) NOT NULL CHECK (classification IN ('medical', 'crisis', 'stray', 'normal')),
-    confidence_score DECIMAL(3, 2) NOT NULL CHECK (confidence_score BETWEEN 0 AND 1),
-    ai_response TEXT,
     council_id UUID REFERENCES councils(id) ON DELETE SET NULL,
-    locality_id UUID REFERENCES localities(id) ON DELETE SET NULL,
+    suburb_id UUID REFERENCES suburbs(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
   );
 
@@ -138,9 +161,9 @@ export const initialSchema = createMigration(
   );
 
   -- Create indexes for performance
-  CREATE INDEX IF NOT EXISTS idx_businesses_locality ON businesses(locality_id);
+  CREATE INDEX IF NOT EXISTS idx_businesses_suburb ON businesses(suburb_id);
   CREATE INDEX IF NOT EXISTS idx_businesses_council ON businesses(council_id);
-  CREATE INDEX IF NOT EXISTS idx_businesses_verified ON businesses(verified);
+  CREATE INDEX IF NOT EXISTS idx_businesses_abn_verified ON businesses(abn_verified);
   CREATE INDEX IF NOT EXISTS idx_businesses_claimed ON businesses(claimed);
   CREATE INDEX IF NOT EXISTS idx_businesses_resource_type ON businesses(resource_type);
   CREATE INDEX IF NOT EXISTS idx_reviews_business ON reviews(business_id);
@@ -168,7 +191,7 @@ export const initialSchema = createMigration(
   CREATE TRIGGER update_councils_updated_at BEFORE UPDATE ON councils
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-  CREATE TRIGGER update_localities_updated_at BEFORE UPDATE ON localities
+  CREATE TRIGGER update_suburbs_updated_at BEFORE UPDATE ON suburbs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
   CREATE TRIGGER update_businesses_updated_at BEFORE UPDATE ON businesses
@@ -189,7 +212,7 @@ export const initialSchema = createMigration(
   DROP TRIGGER IF EXISTS update_featured_updated_at ON featured_placements;
   DROP TRIGGER IF EXISTS update_reviews_updated_at ON reviews;
   DROP TRIGGER IF EXISTS update_businesses_updated_at ON businesses;
-  DROP TRIGGER IF EXISTS update_localities_updated_at ON localities;
+  DROP TRIGGER IF EXISTS update_suburbs_updated_at ON suburbs;
   DROP TRIGGER IF EXISTS update_councils_updated_at ON councils;
   
   DROP FUNCTION IF EXISTS update_updated_at_column();
@@ -207,10 +230,12 @@ export const initialSchema = createMigration(
   DROP INDEX IF EXISTS idx_reviews_business;
   DROP INDEX IF EXISTS idx_businesses_resource_type;
   DROP INDEX IF EXISTS idx_businesses_claimed;
-  DROP INDEX IF EXISTS idx_businesses_verified;
+  DROP INDEX IF EXISTS idx_businesses_abn_verified;
   DROP INDEX IF EXISTS idx_businesses_council;
-  DROP INDEX IF EXISTS idx_businesses_locality;
+  DROP INDEX IF EXISTS idx_businesses_suburb;
   
+  DROP TABLE IF EXISTS subscriptions;
+  DROP TABLE IF EXISTS abn_verifications;
   DROP TABLE IF EXISTS payment_audit_logs;
   DROP TABLE IF EXISTS refresh_tokens;
   DROP TABLE IF EXISTS users;
@@ -218,7 +243,7 @@ export const initialSchema = createMigration(
   DROP TABLE IF EXISTS featured_placements;
   DROP TABLE IF EXISTS reviews;
   DROP TABLE IF EXISTS businesses;
-  DROP TABLE IF EXISTS localities;
+  DROP TABLE IF EXISTS suburbs;
   DROP TABLE IF EXISTS councils;
   `
 );

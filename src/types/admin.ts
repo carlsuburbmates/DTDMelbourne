@@ -73,7 +73,7 @@ export interface PaymentAudit {
   id: string;
   bookingId: string;
   amount: number;
-  status: 'pending' | 'completed' | 'refunded';
+  status: 'pending' | 'completed';
   timestamp: Date;
 }
 

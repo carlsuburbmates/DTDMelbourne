@@ -14,9 +14,8 @@ import { RateLimiters, getClientIp, checkRateLimitOrThrow, formatRateLimitHeader
 import {
   verifyWebhookSignature,
   parseWebhookEvent,
-  processSuccessfulPayment,
-  processFailedPayment,
-  processExpiredSession,
+  processCheckoutSessionCompleted,
+  processSubscriptionUpdated,
 } from '@/lib/stripe';
 import type { WebhookResponse } from '@/types/api';
 
@@ -52,19 +51,12 @@ export async function POST(request: NextRequest) {
     // Handle different event types
     switch (eventData.eventType) {
       case 'checkout.session.completed':
-        await processSuccessfulPayment(eventData.data as any);
+        await processCheckoutSessionCompleted(eventData.data as any);
         break;
 
-      case 'checkout.session.expired':
-        await processExpiredSession(eventData.data as any);
-        break;
-
-      case 'payment_intent.succeeded':
-        await processSuccessfulPayment(eventData.data as any);
-        break;
-
-      case 'payment_intent.payment_failed':
-        await processFailedPayment(eventData.data as any);
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted':
+        await processSubscriptionUpdated(eventData.data as any);
         break;
 
       default:

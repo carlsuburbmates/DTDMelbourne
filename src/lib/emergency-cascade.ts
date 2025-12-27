@@ -39,7 +39,6 @@ export interface CascadeMetrics {
  */
 export interface EmergencyClassification {
   classification: 'medical' | 'crisis' | 'stray' | 'normal';
-  confidence_score: number;
   reasoning: string;
   provider: 'zai';
 }
@@ -86,7 +85,7 @@ class CascadeManager {
       total_failure_count: 0,
       cascade_events: [],
     };
-    this.cascadeEnabled = process.env.EMERGENCY_CASCADE_ENABLED !== 'false';
+    this.cascadeEnabled = process.env.EMERGENCY_CASCADE_ENABLED === 'true';
   }
 
   /**
@@ -124,6 +123,10 @@ class CascadeManager {
     operation: string,
     zaiOperation: () => Promise<T>
   ): Promise<T> {
+    if (!this.cascadeEnabled) {
+      throw new AI_SERVICE_ERROR('Emergency cascade disabled');
+    }
+
     const startTime = Date.now();
 
     // Try Z.AI first
@@ -280,7 +283,7 @@ export function resetCascadeManager(): void {
  * Check if cascade is enabled
  */
 export function isCascadeEnabled(): boolean {
-  return process.env.EMERGENCY_CASCADE_ENABLED !== 'false';
+  return process.env.EMERGENCY_CASCADE_ENABLED === 'true';
 }
 
 /**

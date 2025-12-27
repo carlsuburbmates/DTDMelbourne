@@ -177,7 +177,6 @@ function convertToGA4Event(event: AnalyticsEvent): {
           emergency_type: (event as EmergencyEvent).properties.type,
           emergency_severity: (event as EmergencyEvent).properties.severity,
           emergency_classification: (event as EmergencyEvent).properties.classification,
-          confidence_score: (event as EmergencyEvent).properties.confidenceScore,
         },
       };
 
@@ -361,7 +360,6 @@ export function trackEmergency(properties: {
   description: string;
   sessionId: string;
   classification?: string;
-  confidenceScore?: number;
 }): void {
   const event: EmergencyEvent = {
     id: crypto.randomUUID(),

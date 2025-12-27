@@ -65,33 +65,6 @@ describe('EmergencyLogs Component', () => {
     });
   });
 
-  it('should display AI performance metrics', async () => {
-    const mockEvents = [
-      {
-        id: '1',
-        type: 'ai',
-        severity: 'medium',
-        message: 'AI response time exceeded threshold',
-        timestamp: '2025-01-01T00:00:00Z',
-        resolved: false,
-        aiPerformance: {
-          responseTime: 2500,
-          accuracy: 85,
-          successRate: 90
-        }
-      }
-    ];
-
-    (adminService.getEmergencyEvents as any).mockResolvedValue({ events: mockEvents, total: 1 });
-
-    render(<EmergencyLogs />);
-
-    await waitFor(() => {
-      expect(screen.getByText('2500ms')).toBeInTheDocument();
-      expect(screen.getByText('85%')).toBeInTheDocument();
-    });
-  });
-
   it('should handle pagination', async () => {
     const mockEvents = [
       {

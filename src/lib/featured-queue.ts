@@ -8,6 +8,9 @@ import { supabaseAdmin } from './auth';
 import { logError } from './errors';
 import type { FeaturedPlacement } from '../types/database';
 
+const FEATURED_DURATION_DAYS = 30;
+const FEATURED_PRICE_CENTS = 1500;
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -39,8 +42,7 @@ export interface QueueStatistics {
 export async function addToQueue(
   trainerId: string,
   councilId: string,
-  stripePaymentId: string,
-  durationDays: number
+  stripePaymentId: string
 ): Promise<FeaturedPlacement> {
   try {
     // Get current queue position for this council
@@ -60,21 +62,20 @@ export async function addToQueue(
     // Calculate start and end dates
     const startDate = new Date();
     const endDate = new Date();
-    endDate.setDate(endDate.getDate() + durationDays);
+    endDate.setDate(endDate.getDate() + FEATURED_DURATION_DAYS);
 
     // Create featured placement with queued status
     const { data, error } = await supabaseAdmin
       .from('featured_placements')
       .insert({
-        business_id: parseInt(trainerId, 10),
-        council_id: parseInt(councilId, 10),
+        business_id: trainerId,
+        council_id: councilId,
         stripe_payment_id: stripePaymentId,
-        amount_cents: durationDays * 2000,
+        amount_cents: FEATURED_PRICE_CENTS,
         currency: 'AUD',
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
+        starts_at: startDate.toISOString(),
+        ends_at: endDate.toISOString(),
         status: 'queued',
-        tier: 'basic',
         queue_position: nextPosition,
       })
       .select()
@@ -159,10 +160,10 @@ export async function getQueuePosition(
     // Get all active placements for this council
     const { data: activePlacements, error: activeError } = await supabaseAdmin
       .from('featured_placements')
-      .select('end_date')
+      .select('ends_at')
       .eq('council_id', placement.council_id)
       .eq('status', 'active')
-      .order('end_date', { ascending: true });
+      .order('ends_at', { ascending: true });
 
     if (activeError) {
       throw new Error('Failed to get active placements');
@@ -171,7 +172,7 @@ export async function getQueuePosition(
     // Calculate estimated days until activation
     let estimatedDays = 0;
     if (activePlacements && activePlacements.length > 0) {
-      const lastActiveEnd = new Date(activePlacements[activePlacements.length - 1].end_date);
+      const lastActiveEnd = new Date(activePlacements[activePlacements.length - 1].ends_at);
       const today = new Date();
       const diffTime = lastActiveEnd.getTime() - today.getTime();
       estimatedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -244,7 +245,6 @@ export async function removeFromQueue(
       .from('featured_placements')
       .update({
         status: 'cancelled',
-        refund_reason: reason,
       })
       .eq('id', placement.id);
 

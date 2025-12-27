@@ -48,7 +48,7 @@ export interface PerformanceAlert {
   type: 'warning' | 'error' | 'critical';
   metric: string;
   value: number;
-  threshold: number;
+  limit: number;
   timestamp: Date;
   message: string;
 }
@@ -100,37 +100,37 @@ class PerformanceMonitoringService {
     // Core Web Vitals
     onCLS((metric) => {
       this.metrics.CLS = metric;
-      this.checkThreshold('CLS', metric.value, 0.1);
+      this.checkLimit('CLS', metric.value, 0.1);
       this.sendMetric('CLS', metric);
     });
 
     onFID((metric) => {
       this.metrics.FID = metric;
-      this.checkThreshold('FID', metric.value, 100);
+      this.checkLimit('FID', metric.value, 100);
       this.sendMetric('FID', metric);
     });
 
     onFCP((metric) => {
       this.metrics.FCP = metric;
-      this.checkThreshold('FCP', metric.value, 1800);
+      this.checkLimit('FCP', metric.value, 1800);
       this.sendMetric('FCP', metric);
     });
 
     onLCP((metric) => {
       this.metrics.LCP = metric;
-      this.checkThreshold('LCP', metric.value, 2500);
+      this.checkLimit('LCP', metric.value, 2500);
       this.sendMetric('LCP', metric);
     });
 
     onTTFB((metric) => {
       this.metrics.TTFB = metric;
-      this.checkThreshold('TTFB', metric.value, 600);
+      this.checkLimit('TTFB', metric.value, 600);
       this.sendMetric('TTFB', metric);
     });
 
     onINP((metric) => {
       this.metrics.INP = metric;
-      this.checkThreshold('INP', metric.value, 200);
+      this.checkLimit('INP', metric.value, 200);
       this.sendMetric('INP', metric);
     });
 
@@ -211,18 +211,18 @@ class PerformanceMonitoringService {
   }
 
   /**
-   * Check threshold and create alert if exceeded
+   * Check limit and create alert if exceeded
    */
-  private checkThreshold(metric: string, value: number, threshold: number): void {
-    if (value > threshold) {
+  private checkLimit(metric: string, value: number, limit: number): void {
+    if (value > limit) {
       const alert: PerformanceAlert = {
         id: `${metric}-${Date.now()}`,
-        type: value > threshold * 2 ? 'critical' : 'warning',
+        type: value > limit * 2 ? 'critical' : 'warning',
         metric,
         value,
-        threshold,
+        limit,
         timestamp: new Date(),
-        message: `${metric} (${value.toFixed(2)}) exceeds threshold (${threshold})`,
+        message: `${metric} (${value.toFixed(2)}) exceeds limit (${limit})`,
       };
 
       this.alerts.push(alert);

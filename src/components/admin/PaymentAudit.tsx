@@ -35,8 +35,6 @@ export default function PaymentAudit() {
         return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'refunded':
-        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -49,11 +47,8 @@ export default function PaymentAudit() {
     const pendingRevenue = audits
       .filter((a) => a.status === 'pending')
       .reduce((sum, a) => sum + a.amount, 0);
-    const refundedRevenue = audits
-      .filter((a) => a.status === 'refunded')
-      .reduce((sum, a) => sum + a.amount, 0);
 
-    return { totalRevenue, pendingRevenue, refundedRevenue };
+    return { totalRevenue, pendingRevenue };
   }
 
   if (loading) {
@@ -77,7 +72,7 @@ export default function PaymentAudit() {
       )}
 
       {/* Revenue Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-sm font-medium text-green-800">Total Revenue</p>
           <p className="text-2xl font-bold text-green-900 mt-2">
@@ -88,12 +83,6 @@ export default function PaymentAudit() {
           <p className="text-sm font-medium text-yellow-800">Pending</p>
           <p className="text-2xl font-bold text-yellow-900 mt-2">
             ${metrics.pendingRevenue.toLocaleString()}
-          </p>
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm font-medium text-red-800">Refunded</p>
-          <p className="text-2xl font-bold text-red-900 mt-2">
-            ${metrics.refundedRevenue.toLocaleString()}
           </p>
         </div>
       </div>

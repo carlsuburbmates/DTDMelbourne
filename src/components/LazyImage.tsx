@@ -68,7 +68,6 @@ export function LazyImage({
       },
       {
         rootMargin: '50px',
-        threshold: 0.01,
       }
     );
 

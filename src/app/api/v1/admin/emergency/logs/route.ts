@@ -60,10 +60,6 @@ export async function GET(request: NextRequest) {
       query = query.eq('classification', validatedParams.classification);
     }
 
-    if (validatedParams.min_confidence) {
-      query = query.gte('confidence_score', validatedParams.min_confidence);
-    }
-
     if (validatedParams.date_from) {
       query = query.gte('created_at', validatedParams.date_from);
     }

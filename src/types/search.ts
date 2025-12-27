@@ -17,12 +17,12 @@ export interface AdvancedSearchFilters {
   availability?: boolean;
   priceRange?: { min: number; max: number };
   councilId?: string;
-  localityId?: string;
+  suburbId?: string;
   serviceType?: string;
   ageSpecialty?: string;
   behaviorIssue?: string;
   resourceType?: string;
-  verified?: boolean;
+  abnVerified?: boolean;
   claimed?: boolean;
   search?: string;
 }

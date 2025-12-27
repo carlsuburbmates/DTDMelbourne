@@ -47,9 +47,8 @@ export async function POST(request: NextRequest) {
     const { data: existingProfile, error: fetchError } = await supabase
       .from('businesses')
       .select('id, service_type_primary, service_type_secondary')
-      .eq('resource_type', 'trainer')
-      .eq('email', user.email)
-      .eq('deleted_at', null)
+      .eq('user_id', user.id)
+      .eq('deleted', false)
       .single();
 
     if (fetchError || !existingProfile) {

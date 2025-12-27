@@ -89,8 +89,6 @@ export interface PaymentStats {
   by_council: CouncilStats[];
   successful_payments: number;
   failed_payments: number;
-  refund_count: number;
-  refund_amount: number;
 }
 
 /**
@@ -102,11 +100,9 @@ export interface EmergencyStats {
   crisis: number;
   stray: number;
   normal: number;
-  average_confidence: number;
   by_council: CouncilStats[];
   new_this_week: number;
   new_this_month: number;
-  ai_response_rate: number;
 }
 
 /**
@@ -117,7 +113,6 @@ export interface FeaturedStats {
   active: number;
   queued: number;
   expired: number;
-  refunded: number;
   cancelled: number;
   by_council: CouncilStats[];
   queue_length: number;
@@ -428,7 +423,6 @@ export class AdminDashboardService {
       const active = featuredPlacements?.filter((f) => f.status === 'active').length || 0;
       const queued = featuredPlacements?.filter((f) => f.status === 'queued').length || 0;
       const expired = featuredPlacements?.filter((f) => f.status === 'expired').length || 0;
-      const refunded = featuredPlacements?.filter((f) => f.status === 'refunded').length || 0;
       const cancelled = featuredPlacements?.filter((f) => f.status === 'cancelled').length || 0;
 
       // Get council names
@@ -466,8 +460,6 @@ export class AdminDashboardService {
         by_council: byCouncil,
         successful_payments: active + expired,
         failed_payments: 0, // TODO: Implement actual calculation
-        refund_count: refunded,
-        refund_amount: refunded * 100, // TODO: Implement actual calculation
       };
     } catch (error) {
       logError(error, { method: 'getPaymentStats' });
@@ -486,7 +478,7 @@ export class AdminDashboardService {
     try {
       const { data: triageLogs, error } = await this.supabase
         .from('triage_log')
-        .select('id, classification, confidence_score, ai_response, created_at');
+        .select('id, classification, created_at');
 
       if (error) throw error;
 
@@ -495,18 +487,6 @@ export class AdminDashboardService {
       const crisis = triageLogs?.filter((t) => t.classification === 'crisis').length || 0;
       const stray = triageLogs?.filter((t) => t.classification === 'stray').length || 0;
       const normal = triageLogs?.filter((t) => t.classification === 'normal').length || 0;
-
-      // Calculate average confidence
-      const averageConfidence =
-        triageLogs && triageLogs.length > 0
-          ? triageLogs.reduce((sum, t) => sum + t.confidence_score, 0) / triageLogs.length
-          : 0;
-
-      // Calculate AI response rate
-      const aiResponseRate =
-        triageLogs && triageLogs.length > 0
-          ? triageLogs.filter((t) => t.ai_response !== null).length / triageLogs.length
-          : 0;
 
       // Calculate new triage
       const now = new Date();
@@ -522,11 +502,9 @@ export class AdminDashboardService {
         crisis,
         stray,
         normal,
-        average_confidence: Math.round(averageConfidence * 100) / 100,
         by_council: [], // TODO: Implement council-based triage stats
         new_this_week: newThisWeek,
         new_this_month: newThisMonth,
-        ai_response_rate: Math.round(aiResponseRate * 100) / 100,
       };
     } catch (error) {
       logError(error, { method: 'getEmergencyStats' });
@@ -553,7 +531,6 @@ export class AdminDashboardService {
       const active = featuredPlacements?.filter((f) => f.status === 'active').length || 0;
       const queued = featuredPlacements?.filter((f) => f.status === 'queued').length || 0;
       const expired = featuredPlacements?.filter((f) => f.status === 'expired').length || 0;
-      const refunded = featuredPlacements?.filter((f) => f.status === 'refunded').length || 0;
       const cancelled = featuredPlacements?.filter((f) => f.status === 'cancelled').length || 0;
 
       // Get council names
@@ -587,7 +564,6 @@ export class AdminDashboardService {
         active,
         queued,
         expired,
-        refunded,
         cancelled,
         by_council: byCouncil,
         queue_length: queueLength,

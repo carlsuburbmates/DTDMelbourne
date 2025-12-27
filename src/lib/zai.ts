@@ -24,7 +24,6 @@ interface ZaiConfig {
  */
 export interface EmergencyClassification {
   classification: 'medical' | 'crisis' | 'stray' | 'normal';
-  confidence_score: number;
   reasoning: string;
 }
 
@@ -109,13 +108,11 @@ class ZaiClient {
         max_tokens: 500,
       }) as {
         classification: string;
-        confidence: number;
         reasoning: string;
       };
 
       return {
         classification: this.validateClassification(response.classification),
-        confidence_score: Math.min(Math.max(response.confidence, 0), 1),
         reasoning: response.reasoning,
       };
     } catch (error) {
@@ -198,7 +195,6 @@ Situation details:
 Provide your response in JSON format:
 {
   "classification": "medical|crisis|stray|normal",
-  "confidence": 0.0-1.0,
   "reasoning": "Brief explanation of your classification"
 }`;
   }

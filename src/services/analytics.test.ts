@@ -266,7 +266,6 @@ describe('Event Tracking', () => {
         description: 'Dog needs immediate medical attention',
         sessionId,
         classification: 'medical',
-        confidenceScore: 0.95,
       };
 
       trackEmergency(properties);

@@ -6,7 +6,6 @@
 
 import { supabase } from './auth';
 import { handleSupabaseError, NotFoundError, BadRequestError } from './errors';
-import { getCascadeManager } from './emergency-cascade';
 import type { EmergencyContact, DogBusinessResourceType, DogTriageClassification } from '../types/database';
 
 // ============================================================================
@@ -17,22 +16,15 @@ import type { EmergencyContact, DogBusinessResourceType, DogTriageClassification
  * Emergency contact input
  */
 export interface EmergencyContactInput {
-  business_id: number;
+  business_id: string;
   resource_type: DogBusinessResourceType;
   name: string;
-  locality_id?: number;
-  council_id?: number;
+  suburb_id?: string;
+  council_id?: string;
   phone: string;
-  email?: string | null;
-  website?: string | null;
-  description?: string | null;
-  emergency_phone?: string | null;
   emergency_hours?: string | null;
-  emergency_services?: string[] | null;
-  verified?: boolean;
-  claimed?: boolean;
-  scaffolded?: boolean;
-  data_source?: string;
+  availability_status?: string;
+  last_verified?: Date;
 }
 
 /**
@@ -41,14 +33,7 @@ export interface EmergencyContactInput {
 export interface EmergencyContactUpdateInput {
   name?: string;
   phone?: string;
-  email?: string | null;
-  website?: string | null;
-  description?: string | null;
-  emergency_phone?: string | null;
   emergency_hours?: string | null;
-  emergency_services?: string[] | null;
-  verified?: boolean;
-  claimed?: boolean;
   availability_status?: string;
   last_verified?: Date;
 }
@@ -84,17 +69,17 @@ class EmergencyContactsService {
   }
 
   /**
-   * Get emergency contacts by locality
+   * Get emergency contacts by suburb
    */
-  async getEmergencyContactsByLocality(
-    localityId: string,
+  async getEmergencyContactsBySuburb(
+    suburbId: string,
     limit: number = 10,
     offset: number = 0
   ): Promise<EmergencyContact[]> {
     const { data: contacts, error } = await supabase
       .from('emergency_contacts')
       .select('*')
-      .eq('locality_id', localityId)
+      .eq('suburb_id', suburbId)
       .order('name', { ascending: true })
       .range(offset, offset + limit - 1);
 
@@ -208,19 +193,12 @@ class EmergencyContactsService {
         business_id: data.business_id,
         resource_type: data.resource_type,
         name: data.name,
-        locality_id: data.locality_id,
+        suburb_id: data.suburb_id,
         council_id: data.council_id,
         phone: data.phone,
-        email: data.email,
-        website: data.website,
-        description: data.description,
-        emergency_phone: data.emergency_phone,
         emergency_hours: data.emergency_hours,
-        emergency_services: data.emergency_services,
-        verified: data.verified ?? false,
-        claimed: data.claimed ?? false,
-        scaffolded: data.scaffolded ?? true,
-        data_source: data.data_source || 'manual_form',
+        availability_status: data.availability_status || 'active',
+        last_verified: data.last_verified ? data.last_verified.toISOString() : null,
       })
       .select()
       .single();
@@ -249,36 +227,8 @@ class EmergencyContactsService {
       updateData.phone = data.phone;
     }
 
-    if (data.email !== undefined) {
-      updateData.email = data.email;
-    }
-
-    if (data.website !== undefined) {
-      updateData.website = data.website;
-    }
-
-    if (data.description !== undefined) {
-      updateData.description = data.description;
-    }
-
-    if (data.emergency_phone !== undefined) {
-      updateData.emergency_phone = data.emergency_phone;
-    }
-
     if (data.emergency_hours !== undefined) {
       updateData.emergency_hours = data.emergency_hours;
-    }
-
-    if (data.emergency_services !== undefined) {
-      updateData.emergency_services = data.emergency_services;
-    }
-
-    if (data.verified !== undefined) {
-      updateData.verified = data.verified;
-    }
-
-    if (data.claimed !== undefined) {
-      updateData.claimed = data.claimed;
     }
 
     if (data.availability_status !== undefined) {
@@ -350,9 +300,9 @@ class EmergencyContactsService {
   }
 
   /**
-   * Get verified emergency contacts
+   * Get active emergency contacts
    */
-  async getVerifiedEmergencyContacts(
+  async getActiveEmergencyContacts(
     councilId?: string,
     limit: number = 10,
     offset: number = 0
@@ -360,7 +310,7 @@ class EmergencyContactsService {
     let query = supabase
       .from('emergency_contacts')
       .select('*')
-      .eq('verified', true)
+      .eq('availability_status', 'active')
       .order('name', { ascending: true });
 
     if (councilId) {
@@ -381,7 +331,7 @@ class EmergencyContactsService {
    */
   async getEmergencyContactsStatistics(): Promise<{
     total_contacts: number;
-    verified_contacts: number;
+    active_contacts: number;
     by_resource_type: Record<string, number>;
     by_council: Record<string, number>;
   }> {
@@ -394,14 +344,14 @@ class EmergencyContactsService {
       throw handleSupabaseError(countError);
     }
 
-    // Get verified count
-    const { count: verifiedCount, error: verifiedError } = await supabase
+    // Get active count
+    const { count: activeCount, error: activeError } = await supabase
       .from('emergency_contacts')
       .select('*', { count: 'exact', head: true })
-      .eq('verified', true);
+      .eq('availability_status', 'active');
 
-    if (verifiedError) {
-      throw handleSupabaseError(verifiedError);
+    if (activeError) {
+      throw handleSupabaseError(activeError);
     }
 
     // Get all contacts for statistics
@@ -425,7 +375,7 @@ class EmergencyContactsService {
 
     return {
       total_contacts: totalCount || 0,
-      verified_contacts: verifiedCount || 0,
+      active_contacts: activeCount || 0,
       by_resource_type: byResourceType,
       by_council: byCouncil,
     };

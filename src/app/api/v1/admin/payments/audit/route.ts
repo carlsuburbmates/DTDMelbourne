@@ -26,13 +26,6 @@ export async function GET(request: NextRequest) {
         status: 'pending',
         timestamp: new Date('2025-12-21T14:30:00Z'),
       },
-      {
-        id: '3',
-        bookingId: 'booking-3',
-        amount: 3000,
-        status: 'refunded',
-        timestamp: new Date('2025-12-22T09:15:00Z'),
-      },
     ];
 
     return NextResponse.json({ audits: mockAudits });

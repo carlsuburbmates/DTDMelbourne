@@ -214,8 +214,8 @@ function buildQueryParams(params: SearchQueryParams): Record<string, string> {
     queryParams.council_id = filters.councilId;
   }
   
-  if (filters.localityId) {
-    queryParams.locality_id = filters.localityId;
+  if (filters.suburbId) {
+    queryParams.suburb_id = filters.suburbId;
   }
   
   if (filters.serviceType) {
@@ -234,8 +234,8 @@ function buildQueryParams(params: SearchQueryParams): Record<string, string> {
     queryParams.resource_type = filters.resourceType;
   }
   
-  if (filters.verified !== undefined) {
-    queryParams.verified = filters.verified.toString();
+  if (filters.abnVerified !== undefined) {
+    queryParams.abn_verified = filters.abnVerified.toString();
   }
   
   if (filters.claimed !== undefined) {

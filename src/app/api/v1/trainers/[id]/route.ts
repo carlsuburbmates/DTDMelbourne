@@ -25,16 +25,16 @@ export async function GET(
     // Validate trainer ID
     const validatedParams = validateQueryParams(getTrainerByIdSchema, { id: params.id });
 
-    // Get trainer with council and locality
+    // Get trainer with council and suburb
     const { data: trainer, error } = await supabase
       .from('businesses')
       .select(`
         *,
         council:councils(id, name, region, shire, ux_label),
-        locality:localities(id, name, postcode, region, ux_label)
+        suburb:suburbs(id, name, postcode, region, ux_label)
       `)
       .eq('id', validatedParams.id)
-      .eq('deleted_at', null)
+      .eq('deleted', false)
       .single();
 
     if (error) {
@@ -51,8 +51,7 @@ export async function GET(
       .select('*')
       .eq('business_id', validatedParams.id)
       .eq('status', 'active')
-      .gte('start_date', new Date().toISOString())
-      .lte('end_date', new Date().toISOString())
+      .gt('ends_at', new Date().toISOString())
       .maybeSingle();
 
     // Get reviews
@@ -71,7 +70,7 @@ export async function GET(
         data: {
           trainer,
           council: trainer.council,
-          locality: trainer.locality,
+          suburb: trainer.suburb,
           reviews: reviews || [],
           featured: featured || null,
         },

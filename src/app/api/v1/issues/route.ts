@@ -20,16 +20,17 @@ export async function GET(request: NextRequest) {
     const issues = [
       'Pulling on lead',
       'Separation anxiety',
-      'Barking',
-      'Aggression',
-      'Jumping up on people',
+      'Excessive barking',
+      'Dog aggression',
+      'Leash reactivity',
+      'Jumping up',
+      'Destructive behaviour',
       'Recall issues',
+      'Anxiety',
+      'Resource guarding',
+      'Mouthing/nipping/biting',
+      'Rescue dog support',
       'Socialisation',
-      'Chewing',
-      'Digging',
-      'House training',
-      'Fear/phobias',
-      'Other',
     ];
 
     // Return response

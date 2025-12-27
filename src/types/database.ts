@@ -13,29 +13,30 @@
  * Based on DOCS/02_DOMAIN_MODEL.md
  */
 export type DogAgeGroup =
-  | 'Puppy (0–6 months)'
-  | 'Adolescent (6–18 months)'
-  | 'Adult (1.5–7 years)'
-  | 'Senior (7–10 years)'
-  | 'Any age';
+  | 'Puppies (0–6m)'
+  | 'Adolescent (6–18m)'
+  | 'Adult (18m–7y)'
+  | 'Senior (7y+)'
+  | 'Rescue';
 
 /**
  * Dog behavior issue classification
  * Based on DOCS/02_DOMAIN_MODEL.md
  */
 export type DogBehaviorIssue =
-  | 'Pulling on the lead'
+  | 'Pulling on lead'
   | 'Separation anxiety'
-  | 'Barking'
-  | 'Aggression'
-  | 'Jumping up on people'
+  | 'Excessive barking'
+  | 'Dog aggression'
+  | 'Leash reactivity'
+  | 'Jumping up'
+  | 'Destructive behaviour'
   | 'Recall issues'
-  | 'Socialisation'
-  | 'Chewing'
-  | 'Digging'
-  | 'House training'
-  | 'Fear/phobias'
-  | 'Other';
+  | 'Anxiety'
+  | 'Resource guarding'
+  | 'Mouthing/nipping/biting'
+  | 'Rescue dog support'
+  | 'Socialisation';
 
 /**
  * Dog service type classification
@@ -69,7 +70,12 @@ export type ReviewModerationStatus = 'pending' | 'approved' | 'rejected';
  * Featured placement status
  * Based on DOCS/02_DOMAIN_MODEL.md
  */
-export type FeaturedPlacementStatus = 'queued' | 'active' | 'expired' | 'refunded' | 'cancelled';
+export type FeaturedPlacementStatus = 'queued' | 'active' | 'expired' | 'cancelled';
+
+/**
+ * Business tier (monetisation)
+ */
+export type BusinessTier = 'basic' | 'pro';
 
 /**
  * Dog triage classification
@@ -113,10 +119,10 @@ export interface Council {
 }
 
 /**
- * Locality interface
+ * Suburb interface
  * Reference data for 200+ Melbourne suburbs
  */
-export interface Locality {
+export interface Suburb {
   id: string;
   name: string;
   council_id: string;
@@ -151,8 +157,10 @@ export interface Business {
   id: string;
   name: string;
   resource_type: DogBusinessResourceType;
-  locality_id: string;
+  suburb_id: string;
   council_id: string;
+  region: CouncilRegion;
+  address: string | null;
   phone: string;
   email: string | null;
   website: string | null;
@@ -161,15 +169,15 @@ export interface Business {
   behavior_issues: DogBehaviorIssue[];
   service_type_primary: DogServiceType | null;
   service_type_secondary: DogServiceType[] | null;
-  abr_abn: string | null;
-  abr_abn_status: string | null;
+  abn: string | null;
+  abn_verified: boolean;
   emergency_phone: string | null;
   emergency_hours: string | null;
   emergency_services: string[] | null;
-  verified: boolean;
   claimed: boolean;
   scaffolded: boolean;
   data_source: BusinessDataSource;
+  tier: BusinessTier;
   deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -201,12 +209,10 @@ export interface FeaturedPlacement {
   id: string;
   business_id: string;
   council_id: string;
-  start_date: Date;
-  end_date: Date;
+  starts_at: Date;
+  ends_at: Date;
   status: FeaturedPlacementStatus;
   queue_position: number | null;
-  refund_reason: string | null;
-  refunded_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -218,10 +224,50 @@ export interface FeaturedPlacement {
 export interface PaymentAudit {
   id: string;
   stripe_event_id: string;
-  event_type: string;
-  payload: unknown;
-  processed_at: Date;
+  stripe_event_type: string;
+  business_id: string | null;
+  council_id: string | null;
+  payment_intent_id: string | null;
+  charge_id: string | null;
+  customer_id: string | null;
+  amount_cents: number | null;
+  currency: string | null;
+  status: string | null;
+  webhook_received_at: Date;
+  processed_at: Date | null;
+  processing_success: boolean | null;
+  processing_error: string | null;
   created_at: Date;
+}
+
+/**
+ * ABN verification interface
+ * Optional verification record (Active status = badge)
+ */
+export interface AbnVerification {
+  id: string;
+  business_id: string;
+  abn: string;
+  status: string;
+  verified: boolean;
+  matched_json: unknown | null;
+  checked_at: Date;
+  created_at: Date;
+}
+
+/**
+ * Subscription interface
+ * Pro (Gold Card) subscription status
+ */
+export interface Subscription {
+  id: string;
+  business_id: string;
+  tier: BusinessTier;
+  status: string;
+  current_period_end: Date;
+  stripe_subscription_id: string | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 /**
@@ -230,22 +276,15 @@ export interface PaymentAudit {
  */
 export interface EmergencyContact {
   id: string;
-  name: string;
+  business_id: string;
   resource_type: DogBusinessResourceType;
-  locality_id: string;
-  council_id: string;
+  name: string;
+  suburb_id: string | null;
+  council_id: string | null;
   phone: string;
-  email: string | null;
-  website: string | null;
-  description: string | null;
-  emergency_phone: string | null;
   emergency_hours: string | null;
-  emergency_services: string[] | null;
-  verified: boolean;
-  claimed: boolean;
-  scaffolded: boolean;
-  data_source: BusinessDataSource;
-  deleted_at: Date | null;
+  availability_status: string;
+  last_verified: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -258,8 +297,7 @@ export interface TriageLog {
   id: string;
   user_message: string;
   classification: DogTriageClassification;
-  confidence_score: number;
-  ai_response: string | null;
+  recommended_actions?: string[] | null;
   created_at: Date;
 }
 
@@ -290,10 +328,10 @@ export interface BusinessWithCouncil extends Business {
 }
 
 /**
- * Business with locality relationship
+ * Business with suburb relationship
  */
-export interface BusinessWithLocality extends Business {
-  locality: Locality;
+export interface BusinessWithSuburb extends Business {
+  suburb: Suburb;
 }
 
 /**
@@ -304,16 +342,16 @@ export interface BusinessWithReviews extends Business {
 }
 
 /**
- * Council with localities relationship
+ * Council with suburbs relationship
  */
-export interface CouncilWithLocalities extends Council {
-  localities: Locality[];
+export interface CouncilWithSuburbs extends Council {
+  suburbs: Suburb[];
 }
 
 /**
- * Locality with council relationship
+ * Suburb with council relationship
  */
-export interface LocalityWithCouncil extends Locality {
+export interface SuburbWithCouncil extends Suburb {
   council: Council;
 }
 
@@ -353,9 +391,9 @@ export interface CreateCouncilInput {
 }
 
 /**
- * Input type for creating a locality
+ * Input type for creating a suburb
  */
-export interface CreateLocalityInput {
+export interface CreateSuburbInput {
   name: string;
   council_id: string;
   region: CouncilRegion;
@@ -380,8 +418,10 @@ export interface CreateUserInput {
 export interface CreateBusinessInput {
   name: string;
   resource_type: DogBusinessResourceType;
-  locality_id: string;
+  suburb_id: string;
   council_id: string;
+  region: CouncilRegion;
+  address?: string | null;
   phone: string;
   email?: string | null;
   website?: string | null;
@@ -390,15 +430,15 @@ export interface CreateBusinessInput {
   behavior_issues?: DogBehaviorIssue[];
   service_type_primary?: DogServiceType | null;
   service_type_secondary?: DogServiceType[] | null;
-  abr_abn?: string | null;
-  abr_abn_status?: string | null;
+  abn?: string | null;
+  abn_verified?: boolean;
   emergency_phone?: string | null;
   emergency_hours?: string | null;
   emergency_services?: string[] | null;
-  verified?: boolean;
   claimed?: boolean;
   scaffolded?: boolean;
   data_source?: BusinessDataSource;
+  tier?: BusinessTier;
 }
 
 /**
@@ -417,8 +457,8 @@ export interface CreateReviewInput {
 export interface CreateFeaturedPlacementInput {
   business_id: string;
   council_id: string;
-  start_date: Date;
-  end_date: Date;
+  starts_at: Date;
+  ends_at: Date;
 }
 
 /**
@@ -427,8 +467,7 @@ export interface CreateFeaturedPlacementInput {
 export interface CreateTriageLogInput {
   user_message: string;
   classification: DogTriageClassification;
-  confidence_score: number;
-  ai_response?: string | null;
+  recommended_actions?: string[] | null;
 }
 
 // ============================================================================
@@ -440,6 +479,7 @@ export interface CreateTriageLogInput {
  */
 export interface UpdateBusinessInput {
   name?: string;
+  address?: string | null;
   phone?: string;
   email?: string | null;
   website?: string | null;
@@ -448,13 +488,13 @@ export interface UpdateBusinessInput {
   behavior_issues?: DogBehaviorIssue[];
   service_type_primary?: DogServiceType | null;
   service_type_secondary?: DogServiceType[] | null;
-  abr_abn?: string | null;
-  abr_abn_status?: string | null;
+  abn?: string | null;
+  abn_verified?: boolean;
   emergency_phone?: string | null;
   emergency_hours?: string | null;
   emergency_services?: string[] | null;
-  verified?: boolean;
   claimed?: boolean;
+  tier?: BusinessTier;
 }
 
 /**
@@ -473,8 +513,6 @@ export interface UpdateReviewInput {
 export interface UpdateFeaturedPlacementInput {
   status?: FeaturedPlacementStatus;
   queue_position?: number | null;
-  refund_reason?: string | null;
-  refunded_at?: Date | null;
 }
 
 // ============================================================================
@@ -486,12 +524,12 @@ export interface UpdateFeaturedPlacementInput {
  */
 export interface BusinessFilter {
   council_id?: string;
-  locality_id?: string;
+  suburb_id?: string;
   resource_type?: DogBusinessResourceType;
   age_specialty?: DogAgeGroup;
   behavior_issue?: DogBehaviorIssue;
   service_type?: DogServiceType;
-  verified?: boolean;
+  abn_verified?: boolean;
   claimed?: boolean;
   include_deleted?: boolean;
 }
@@ -522,9 +560,8 @@ export interface FeaturedPlacementFilter {
  */
 export interface EmergencyContactFilter {
   council_id?: string;
-  locality_id?: string;
+  suburb_id?: string;
   resource_type?: DogBusinessResourceType;
-  verified?: boolean;
 }
 
 // ============================================================================
@@ -608,25 +645,28 @@ export type DeepPartial<T> = {
 
 export type {
   Council,
-  Locality,
+  Suburb,
   User,
   Business,
+  BusinessTier,
   Review,
   FeaturedPlacement,
   PaymentAudit,
+  AbnVerification,
+  Subscription,
   EmergencyContact,
   TriageLog,
   CronJob,
   BusinessWithCouncil,
-  BusinessWithLocality,
+  BusinessWithSuburb,
   BusinessWithReviews,
-  CouncilWithLocalities,
-  LocalityWithCouncil,
+  CouncilWithSuburbs,
+  SuburbWithCouncil,
   ReviewWithBusiness,
   FeaturedPlacementWithBusiness,
   FeaturedPlacementWithCouncil,
   CreateCouncilInput,
-  CreateLocalityInput,
+  CreateSuburbInput,
   CreateUserInput,
   CreateBusinessInput,
   CreateReviewInput,

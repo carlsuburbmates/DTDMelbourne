@@ -30,9 +30,9 @@ export default function SystemHealth() {
     }
   }
 
-  function getHealthStatus(value: number, threshold: number) {
-    if (value < threshold * 0.5) return 'good';
-    if (value < threshold * 0.8) return 'warning';
+  function getHealthStatus(value: number, limit: number) {
+    if (value < limit * 0.5) return 'good';
+    if (value < limit * 0.8) return 'warning';
     return 'critical';
   }
 

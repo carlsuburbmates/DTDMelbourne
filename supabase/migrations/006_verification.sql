@@ -38,7 +38,7 @@ FROM pg_tables
 WHERE schemaname = 'public'
   AND tablename IN (
     'councils',
-    'localities',
+    'suburbs',
     'users',
     'businesses',
     'reviews',
@@ -95,7 +95,7 @@ FROM pg_indexes
 WHERE schemaname = 'public'
   AND tablename IN (
     'councils',
-    'localities',
+    'suburbs',
     'users',
     'businesses',
     'reviews',
@@ -149,7 +149,7 @@ DO $$
 DECLARE
   suburb_count INT;
 BEGIN
-  SELECT COUNT(*) INTO suburb_count FROM localities;
+  SELECT COUNT(*) INTO suburb_count FROM suburbs;
   
   IF suburb_count >= 200 THEN
     RAISE NOTICE '✓ Suburb count verification PASSED: % suburbs found', suburb_count;
@@ -168,7 +168,7 @@ BEGIN
   FOR council_without_suburbs IN 
     SELECT id, name FROM councils c
     WHERE NOT EXISTS (
-      SELECT 1 FROM localities l WHERE l.council_id = c.id
+      SELECT 1 FROM suburbs l WHERE l.council_id = c.id
     )
   LOOP
     RAISE NOTICE '✗ Council without suburbs: % (%)', council_without_suburbs.id, council_without_suburbs.name;
@@ -186,7 +186,7 @@ DECLARE
 BEGIN
   FOR invalid_mapping IN 
     SELECT l.id, l.name, l.council_id, c.name AS council_name
-    FROM localities l
+    FROM suburbs l
     LEFT JOIN councils c ON l.council_id = c.id
     WHERE c.id IS NULL
   LOOP
@@ -303,54 +303,15 @@ DECLARE
   invalid_dates RECORD;
 BEGIN
   FOR invalid_dates IN 
-    SELECT fp.id, fp.start_date, fp.end_date
+    SELECT fp.id, fp.starts_at, fp.ends_at
     FROM featured_placements fp
-    WHERE fp.end_date <= fp.start_date
+    WHERE fp.ends_at <= fp.starts_at
   LOOP
     RAISE NOTICE '✗ Invalid featured placement dates: ID % - Start: %, End: %', 
-      invalid_dates.id, invalid_dates.start_date, invalid_dates.end_date;
+      invalid_dates.id, invalid_dates.starts_at, invalid_dates.ends_at;
   END LOOP;
   
   RAISE NOTICE '✓ Featured placement date consistency verification completed';
-END $$ LANGUAGE plpgsql;
-
--- ----------------------------------------------------------------------------
--- Test 11: Verify Featured Placement Refund Consistency
--- ----------------------------------------------------------------------------
-DO $$
-DECLARE
-  inconsistent_refund RECORD;
-BEGIN
-  FOR inconsistent_refund IN 
-    SELECT fp.id, fp.status, fp.refund_reason, fp.refunded_at
-    FROM featured_placements fp
-    WHERE fp.status = 'refunded' 
-      AND (fp.refund_reason IS NULL OR fp.refunded_at IS NULL)
-  LOOP
-    RAISE NOTICE '✗ Inconsistent refund: Placement ID % - Status: %', 
-      inconsistent_refund.id, inconsistent_refund.status;
-  END LOOP;
-  
-  RAISE NOTICE '✓ Featured placement refund consistency verification completed';
-END $$ LANGUAGE plpgsql;
-
--- ----------------------------------------------------------------------------
--- Test 12: Verify Triage Confidence Score Range
--- ----------------------------------------------------------------------------
-DO $$
-DECLARE
-  invalid_confidence RECORD;
-BEGIN
-  FOR invalid_confidence IN 
-    SELECT tl.id, tl.confidence_score
-    FROM triage_logs tl
-    WHERE tl.confidence_score < 0 OR tl.confidence_score > 1
-  LOOP
-    RAISE NOTICE '✗ Invalid triage confidence: Log ID % - Score: %', 
-      invalid_confidence.id, invalid_confidence.confidence_score;
-  END LOOP;
-  
-  RAISE NOTICE '✓ Triage confidence score range verification completed';
 END $$ LANGUAGE plpgsql;
 
 -- ----------------------------------------------------------------------------

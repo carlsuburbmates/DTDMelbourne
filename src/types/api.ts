@@ -7,7 +7,7 @@
 import type {
   Business,
   Council,
-  Locality,
+  Suburb,
   Review,
   FeaturedPlacement,
   EmergencyContact,
@@ -81,16 +81,11 @@ export interface SortQuery {
 /**
  * Search trainers query parameters
  */
-export interface SearchTrainersQuery extends PaginationQuery, SortQuery {
-  council_id?: string;
-  locality_id?: string;
-  resource_type?: DogBusinessResourceType;
-  age_specialty?: DogAgeGroup;
-  behavior_issue?: DogBehaviorIssue;
-  service_type?: DogServiceType;
-  verified?: boolean;
-  claimed?: boolean;
-  search?: string;
+export interface SearchTrainersQuery extends PaginationQuery {
+  suburb: string;
+  age_stage: DogAgeGroup;
+  behaviour_issue?: DogBehaviorIssue;
+  radius_km?: number;
 }
 
 /**
@@ -99,7 +94,7 @@ export interface SearchTrainersQuery extends PaginationQuery, SortQuery {
 export interface TrainerProfileResponse {
   trainer: Business & {
     council?: Council;
-    locality?: Locality;
+    suburb?: Suburb;
   };
   reviews?: Review[];
   featured?: FeaturedPlacement | null;
@@ -124,7 +119,7 @@ export interface CouncilsResponse extends PaginatedResponse<Council> {
 /**
  * Suburbs list response
  */
-export interface SuburbsResponse extends PaginatedResponse<Locality> {
+export interface SuburbsResponse extends PaginatedResponse<Suburb> {
   council_id?: string;
   region?: CouncilRegion;
 }
@@ -157,7 +152,7 @@ export interface EmergencyTriageRequest {
   user_message: string;
   location?: {
     council_id?: string;
-    locality_id?: string;
+    suburb_id?: string;
   };
 }
 
@@ -166,8 +161,7 @@ export interface EmergencyTriageRequest {
  */
 export interface EmergencyTriageResponse {
   classification: DogTriageClassification;
-  confidence_score: number;
-  ai_response: string;
+  recommended_actions: string[];
   emergency_contacts?: EmergencyContact[];
   triage_id: string;
 }
@@ -177,7 +171,7 @@ export interface EmergencyTriageResponse {
  */
 export interface EmergencyContactsQuery extends PaginationQuery {
   council_id?: string;
-  locality_id?: string;
+  suburb_id?: string;
   resource_type?: DogBusinessResourceType;
 }
 
@@ -193,29 +187,21 @@ export interface EmergencyContactsResponse extends PaginatedResponse<EmergencyCo
 /**
  * Create trainer profile request
  */
-export interface CreateTrainerProfileRequest {
+export interface CreateBusinessRequest {
   name: string;
-  locality_id: string;
-  council_id: string;
   phone: string;
   email?: string | null;
+  address: string;
+  suburb: string;
   website?: string | null;
-  description?: string | null;
-  age_specialties?: DogAgeGroup[];
-  behavior_issues?: DogBehaviorIssue[];
-  service_type_primary?: DogServiceType | null;
-  service_type_secondary?: DogServiceType[] | null;
-  abr_abn?: string | null;
-  emergency_phone?: string | null;
-  emergency_hours?: string | null;
-  emergency_services?: string[] | null;
 }
 
 /**
- * Update trainer profile request
+ * Update business request
  */
-export interface UpdateTrainerProfileRequest {
+export interface UpdateBusinessRequest {
   name?: string;
+  address?: string;
   phone?: string;
   email?: string | null;
   website?: string | null;
@@ -224,7 +210,6 @@ export interface UpdateTrainerProfileRequest {
   behavior_issues?: DogBehaviorIssue[];
   service_type_primary?: DogServiceType | null;
   service_type_secondary?: DogServiceType[] | null;
-  abr_abn?: string | null;
   emergency_phone?: string | null;
   emergency_hours?: string | null;
   emergency_services?: string[] | null;
@@ -241,6 +226,30 @@ export interface TrainerOwnProfileResponse {
     average_rating: number;
     featured_status: FeaturedPlacementStatus | null;
   };
+}
+
+/**
+ * Claim business request
+ */
+export interface ClaimBusinessRequest {
+  business_id: string;
+  verification_method: 'sms';
+  code: string;
+}
+
+/**
+ * ABN verify request
+ */
+export interface AbnVerifyRequest {
+  business_id: string;
+  abn: string;
+}
+
+/**
+ * Pro subscribe request
+ */
+export interface ProSubscribeRequest {
+  business_id: string;
 }
 
 /**
@@ -308,20 +317,16 @@ export interface RemoveIssueResponse {
  * Purchase featured placement request
  */
 export interface PurchaseFeaturedRequest {
+  business_id: string;
   council_id: string;
-  duration_days: number;
-  payment_method_id: string;
 }
 
 /**
  * Purchase featured response
  */
 export interface PurchaseFeaturedResponse {
-  featured_placement: FeaturedPlacement;
-  payment_intent_id: string;
-  client_secret: string;
-  amount: number;
-  currency: string;
+  session_id: string;
+  checkout_url: string;
 }
 
 /**
@@ -445,7 +450,6 @@ export interface PromoteFromQueueResponse {
  */
 export interface EmergencyLogsQuery extends PaginationQuery {
   classification?: DogTriageClassification;
-  min_confidence?: number;
   date_from?: string;
   date_to?: string;
 }
@@ -626,8 +630,11 @@ export type {
   EmergencyTriageResponse,
   EmergencyContactsQuery,
   EmergencyContactsResponse,
-  CreateTrainerProfileRequest,
-  UpdateTrainerProfileRequest,
+  CreateBusinessRequest,
+  UpdateBusinessRequest,
+  ClaimBusinessRequest,
+  AbnVerifyRequest,
+  ProSubscribeRequest,
   TrainerOwnProfileResponse,
   AddServiceRequest,
   AddServiceResponse,

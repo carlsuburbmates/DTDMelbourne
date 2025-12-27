@@ -17,7 +17,7 @@ const faqData: FAQItem[] = [
     id: '1',
     category: 'General',
     question: 'What is Dog Trainers Directory?',
-    answer: 'Dog Trainers Directory is a platform that connects dog owners across Melbourne with verified, professional dog trainers. We provide a comprehensive directory where you can search for trainers by location, specialty, and services, read genuine reviews from other dog owners, and book with confidence.',
+    answer: 'Dog Trainers Directory is a platform that connects dog owners across Melbourne with verified, professional dog trainers. We provide a comprehensive directory where you can search for trainers by location, specialty, and services, read genuine reviews from other dog owners, and book with clarity.',
   },
   {
     id: '2',

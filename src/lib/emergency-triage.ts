@@ -6,7 +6,6 @@
 
 import { supabase } from './auth';
 import { handleSupabaseError, NotFoundError, BadRequestError } from './errors';
-import { getCascadeManager } from './emergency-cascade';
 import type { DogTriageClassification } from '../types/database';
 
 // ============================================================================
@@ -19,10 +18,10 @@ import type { DogTriageClassification } from '../types/database';
 export interface EmergencyTriageRequest {
   user_message: string;
   dog_age_group?: string;
-  behavior_issue?: string;
+  behaviour_issue?: string;
   location?: {
     council_id?: string;
-    locality_id?: string;
+    suburb_id?: string;
   };
   ip_address?: string;
   user_agent?: string;
@@ -35,10 +34,7 @@ export interface EmergencyTriageResponse {
   id: string;
   user_message: string;
   classification: DogTriageClassification;
-  confidence_score: number;
-  ai_model_used: string;
   recommended_actions: string[];
-  ai_response: string;
   created_at: Date;
 }
 
@@ -48,7 +44,6 @@ export interface EmergencyTriageResponse {
 export interface EmergencyTriageStatistics {
   total_triages: number;
   classification_counts: Record<string, number>;
-  average_confidence: number;
   most_common_classification: string;
   triages_last_24h: number;
   triages_last_7d: number;
@@ -62,6 +57,35 @@ export interface EmergencyTriageStatistics {
  * Emergency triage service
  */
 class EmergencyTriageService {
+  private classifyDeterministic(message: string): DogTriageClassification {
+    const content = message.toLowerCase();
+    if (/(bite|bitten|attacking|attack|aggressive|out of control)/.test(content)) {
+      return 'crisis';
+    }
+    if (/(bleeding|blood|poison|poisoned|injury|choking|collapse)/.test(content)) {
+      return 'medical';
+    }
+    if (/(stray|lost dog|found dog|wandering|loose)/.test(content)) {
+      return 'stray';
+    }
+    return 'normal';
+  }
+
+  private getDeterministicRecommendations(
+    classification: DogTriageClassification
+  ): string[] {
+    switch (classification) {
+      case 'medical':
+        return ['Contact an emergency vet immediately.'];
+      case 'crisis':
+        return ['Ensure safety first and contact local authorities if needed.'];
+      case 'stray':
+        return ['Contact local council or RSPCA for stray dog support.'];
+      default:
+        return ['Browse local trainers that match your dog’s needs.'];
+    }
+  }
+
   /**
    * Submit emergency triage
    */
@@ -71,28 +95,16 @@ class EmergencyTriageService {
       throw new BadRequestError('User message is required');
     }
 
-    // Use cascade to classify emergency
-    const cascadeManager = getCascadeManager();
-    const classificationResult = await cascadeManager.classifyEmergencyWithCascade(
-      data.user_message,
-      data.dog_age_group || 'Any age',
-      data.behavior_issue || 'Other'
-    );
-
-    // Get recommendations
-    const recommendationsResult = await cascadeManager.getRecommendationsWithCascade(
-      classificationResult.classification
-    );
+    const classification = this.classifyDeterministic(data.user_message);
+    const recommendations = this.getDeterministicRecommendations(classification);
 
     // Create triage log
     const { data: triageLog, error: triageError } = await supabase
       .from('triage_logs')
       .insert({
         owner_message: data.user_message,
-        classification: classificationResult.classification,
-        confidence_score: classificationResult.confidence_score,
-        ai_model_used: classificationResult.provider,
-        recommended_actions: recommendationsResult.recommendations,
+        classification,
+        recommended_actions: recommendations,
         ip_address: data.ip_address,
         user_agent: data.user_agent,
       })
@@ -107,10 +119,7 @@ class EmergencyTriageService {
       id: triageLog.id,
       user_message: triageLog.owner_message,
       classification: triageLog.classification,
-      confidence_score: triageLog.confidence_score || 0,
-      ai_model_used: triageLog.ai_model_used || 'unknown',
       recommended_actions: triageLog.recommended_actions || [],
-      ai_response: recommendationsResult.recommendations.join('\n'),
       created_at: new Date(triageLog.created_at),
     };
   }
@@ -137,10 +146,7 @@ class EmergencyTriageService {
       id: triageLog.id,
       user_message: triageLog.owner_message,
       classification: triageLog.classification,
-      confidence_score: triageLog.confidence_score || 0,
-      ai_model_used: triageLog.ai_model_used || 'unknown',
       recommended_actions: triageLog.recommended_actions || [],
-      ai_response: triageLog.recommended_actions?.join('\n') || '',
       created_at: new Date(triageLog.created_at),
     };
   }
@@ -168,10 +174,7 @@ class EmergencyTriageService {
       id: log.id,
       user_message: log.owner_message,
       classification: log.classification,
-      confidence_score: log.confidence_score || 0,
-      ai_model_used: log.ai_model_used || 'unknown',
       recommended_actions: log.recommended_actions || [],
-      ai_response: log.recommended_actions?.join('\n') || '',
       created_at: new Date(log.created_at),
     }));
   }
@@ -215,10 +218,7 @@ class EmergencyTriageService {
       id: triageLog.id,
       user_message: triageLog.owner_message,
       classification: triageLog.classification,
-      confidence_score: triageLog.confidence_score || 0,
-      ai_model_used: triageLog.ai_model_used || 'unknown',
       recommended_actions: triageLog.recommended_actions || [],
-      ai_response: triageLog.recommended_actions?.join('\n') || '',
       created_at: new Date(triageLog.created_at),
     };
   }
@@ -261,13 +261,9 @@ class EmergencyTriageService {
     }
 
     const classificationCounts: Record<string, number> = {};
-    let totalConfidence = 0;
 
     (classificationData || []).forEach(log => {
       classificationCounts[log.classification] = (classificationCounts[log.classification] || 0) + 1;
-      if (log.confidence_score) {
-        totalConfidence += log.confidence_score;
-      }
     });
 
     // Find most common classification
@@ -306,7 +302,6 @@ class EmergencyTriageService {
     return {
       total_triages: totalCount || 0,
       classification_counts: classificationCounts,
-      average_confidence: totalCount > 0 ? totalConfidence / totalCount : 0,
       most_common_classification: mostCommonClassification,
       triages_last_24h: last24hCount || 0,
       triages_last_7d: last7dCount || 0,
@@ -336,10 +331,7 @@ class EmergencyTriageService {
       id: log.id,
       user_message: log.owner_message,
       classification: log.classification,
-      confidence_score: log.confidence_score || 0,
-      ai_model_used: log.ai_model_used || 'unknown',
       recommended_actions: log.recommended_actions || [],
-      ai_response: log.recommended_actions?.join('\n') || '',
       created_at: new Date(log.created_at),
     }));
   }
@@ -369,10 +361,7 @@ class EmergencyTriageService {
       id: log.id,
       user_message: log.owner_message,
       classification: log.classification,
-      confidence_score: log.confidence_score || 0,
-      ai_model_used: log.ai_model_used || 'unknown',
       recommended_actions: log.recommended_actions || [],
-      ai_response: log.recommended_actions?.join('\n') || '',
       created_at: new Date(log.created_at),
     }));
   }

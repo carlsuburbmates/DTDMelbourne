@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS payment_audits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
   amount INTEGER NOT NULL,
-  status VARCHAR(50) NOT NULL CHECK (status IN ('pending', 'completed', 'refunded')),
+  status VARCHAR(50) NOT NULL CHECK (status IN ('pending', 'completed')),
   timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

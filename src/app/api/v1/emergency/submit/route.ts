@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Get emergency contacts based on location and classification
     let emergencyContacts = [];
 
-    if (validatedBody.location?.council_id || validatedBody.location?.locality_id) {
+    if (validatedBody.location?.council_id || validatedBody.location?.suburb_id) {
       const emergencyContactsService = getEmergencyContactsService();
       
       if (validatedBody.location.council_id) {
@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
           validatedBody.location.council_id,
           10
         );
-      } else if (validatedBody.location.locality_id) {
-        emergencyContacts = await emergencyContactsService.getEmergencyContactsByLocality(
-          validatedBody.location.locality_id,
+      } else if (validatedBody.location.suburb_id) {
+        emergencyContacts = await emergencyContactsService.getEmergencyContactsBySuburb(
+          validatedBody.location.suburb_id,
           10
         );
       }
@@ -67,10 +67,7 @@ export async function POST(request: NextRequest) {
         success: true,
         data: {
           classification: triageResult.classification,
-          confidence_score: triageResult.confidence_score,
-          ai_response: triageResult.ai_response,
           recommended_actions: triageResult.recommended_actions,
-          ai_model_used: triageResult.ai_model_used,
           emergency_contacts: emergencyContacts,
           triage_id: triageResult.id,
         },

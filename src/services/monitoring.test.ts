@@ -86,10 +86,10 @@ describe('PerformanceMonitoringService', () => {
     it('should return alerts after monitoring', async () => {
       await performanceMonitoring.startMonitoring();
       
-      // Simulate metric that exceeds threshold
+      // Simulate metric that exceeds limit
       const mockMetric = {
         id: 'test-metric',
-        value: 5000, // Exceeds LCP threshold
+        value: 5000, // Exceeds LCP limit
         delta: 5000,
         entries: [],
         name: 'LCP',

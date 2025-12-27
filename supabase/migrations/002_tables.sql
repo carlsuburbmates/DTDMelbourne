@@ -25,10 +25,10 @@ CREATE TABLE councils (
 );
 
 -- ----------------------------------------------------------------------------
--- Table: localities
+-- Table: suburbs
 -- Purpose: Melbourne Suburbs (Reference Data)
 -- ----------------------------------------------------------------------------
-CREATE TABLE localities (
+CREATE TABLE suburbs (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL UNIQUE,
   council_id INT NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE localities (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
   FOREIGN KEY (council_id) REFERENCES councils(id) ON DELETE RESTRICT,
-  CONSTRAINT locality_valid_region CHECK (region IN ('Inner City', 'Northern', 'Eastern', 'South Eastern', 'Western'))
+  CONSTRAINT suburb_valid_region CHECK (region IN ('Inner City', 'Northern', 'Eastern', 'South Eastern', 'Western'))
 );
 
 -- ----------------------------------------------------------------------------
@@ -71,10 +71,12 @@ CREATE TABLE businesses (
   user_id INT,
   name VARCHAR(255) NOT NULL,
   resource_type dog_business_resource_type NOT NULL,
-  locality_id INT NOT NULL,
+  suburb_id INT NOT NULL,
   council_id INT NOT NULL,
+  region VARCHAR(50) NOT NULL,
   
   -- Contact Information
+  address VARCHAR(255),
   phone VARCHAR(20),
   email VARCHAR(255),
   website VARCHAR(255),
@@ -96,17 +98,15 @@ CREATE TABLE businesses (
   specialty_animals TEXT[],
   
   -- Verification & Status
-  abr_abn VARCHAR(11),
-  verified BOOLEAN DEFAULT FALSE,
-  verified_at TIMESTAMP,
+  abn VARCHAR(11),
+  abn_verified BOOLEAN DEFAULT FALSE,
   claimed BOOLEAN DEFAULT FALSE,
   claimed_at TIMESTAMP,
   scaffolded BOOLEAN DEFAULT TRUE,
   data_source VARCHAR(50),
   
-  -- Featured Placement (Monetisation)
-  featured_until TIMESTAMP,
-  featured_tier VARCHAR(20),
+  -- Monetisation Tier
+  tier business_tier NOT NULL DEFAULT 'basic',
   
   -- Soft Delete & Audit
   deleted BOOLEAN DEFAULT FALSE,
@@ -116,8 +116,10 @@ CREATE TABLE businesses (
   last_scraped_at TIMESTAMP,
   
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (locality_id) REFERENCES localities(id) ON DELETE RESTRICT,
+  FOREIGN KEY (suburb_id) REFERENCES suburbs(id) ON DELETE RESTRICT,
   FOREIGN KEY (council_id) REFERENCES councils(id) ON DELETE RESTRICT,
+  
+  CONSTRAINT business_valid_region CHECK (region IN ('Inner City', 'Northern', 'Eastern', 'South Eastern', 'Western')),
   
   CONSTRAINT business_type_specific CHECK (
     CASE 
@@ -135,8 +137,43 @@ CREATE TABLE businesses (
     END
   ),
   
-  CONSTRAINT abr_abn_format CHECK (abr_abn IS NULL OR abr_abn ~ '^\d{11}$'),
+  CONSTRAINT abn_format CHECK (abn IS NULL OR abn ~ '^\d{11}$'),
   CONSTRAINT name_not_empty CHECK (name <> '')
+);
+
+-- ----------------------------------------------------------------------------
+-- Table: abn_verifications
+-- Purpose: ABN verification audit (optional, Active status = badge)
+-- ----------------------------------------------------------------------------
+CREATE TABLE abn_verifications (
+  id SERIAL PRIMARY KEY,
+  business_id INT NOT NULL,
+  abn VARCHAR(11) NOT NULL,
+  status VARCHAR(50) NOT NULL,
+  verified BOOLEAN NOT NULL DEFAULT FALSE,
+  matched_json JSONB,
+  checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+  CONSTRAINT abn_verification_format CHECK (abn ~ '^\d{11}$')
+);
+
+-- ----------------------------------------------------------------------------
+-- Table: subscriptions
+-- Purpose: Pro (Gold Card) subscription status
+-- ----------------------------------------------------------------------------
+CREATE TABLE subscriptions (
+  id SERIAL PRIMARY KEY,
+  business_id INT NOT NULL,
+  tier business_tier NOT NULL,
+  status VARCHAR(50) NOT NULL,
+  current_period_end TIMESTAMP NOT NULL,
+  stripe_subscription_id VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
 );
 
 -- ----------------------------------------------------------------------------
@@ -181,16 +218,10 @@ CREATE TABLE featured_placements (
   amount_cents INT NOT NULL,
   currency VARCHAR(3) DEFAULT 'AUD',
   
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  duration_days INT GENERATED ALWAYS AS (end_date - start_date) STORED,
+  starts_at TIMESTAMP NOT NULL,
+  ends_at TIMESTAMP NOT NULL,
   
-  status featured_placement_status NOT NULL,
-  tier VARCHAR(20) DEFAULT 'basic',
-  
-  refunded_at TIMESTAMP,
-  refund_reason TEXT,
-  refund_amount_cents INT,
+  status featured_placement_status NOT NULL DEFAULT 'queued',
   
   queue_position INT,
   queue_activated_at TIMESTAMP,
@@ -202,13 +233,7 @@ CREATE TABLE featured_placements (
   FOREIGN KEY (council_id) REFERENCES councils(id) ON DELETE RESTRICT,
   
   CONSTRAINT amount_positive CHECK (amount_cents > 0),
-  CONSTRAINT dates_valid CHECK (end_date > start_date),
-  CONSTRAINT refund_consistency CHECK (
-    CASE
-      WHEN status = 'refunded' THEN refund_reason IS NOT NULL AND refund_amount_cents > 0 AND refunded_at IS NOT NULL
-      ELSE TRUE
-    END
-  )
+  CONSTRAINT dates_valid CHECK (ends_at > starts_at)
 );
 
 -- ----------------------------------------------------------------------------
@@ -253,7 +278,7 @@ CREATE TABLE emergency_contacts (
   resource_type dog_business_resource_type NOT NULL,
   
   name VARCHAR(255) NOT NULL,
-  locality_id INT,
+  suburb_id INT,
   council_id INT,
   phone VARCHAR(20) NOT NULL,
   emergency_hours VARCHAR(100),
@@ -265,7 +290,7 @@ CREATE TABLE emergency_contacts (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
   FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
-  FOREIGN KEY (locality_id) REFERENCES localities(id) ON DELETE SET NULL,
+  FOREIGN KEY (suburb_id) REFERENCES suburbs(id) ON DELETE SET NULL,
   FOREIGN KEY (council_id) REFERENCES councils(id) ON DELETE SET NULL,
   
   CONSTRAINT resource_type_emergency CHECK (resource_type IN ('emergency_vet', 'urgent_care', 'emergency_shelter'))
@@ -281,8 +306,6 @@ CREATE TABLE triage_logs (
   
   -- Triage Classification
   classification dog_triage_classification NOT NULL,
-  confidence_score DECIMAL(3, 2),
-  ai_model_used VARCHAR(50),
   
   -- Recommended Actions
   recommended_actions TEXT[],
@@ -294,9 +317,7 @@ CREATE TABLE triage_logs (
   -- Metadata
   ip_address INET,
   user_agent TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  
-  CONSTRAINT confidence_valid CHECK (confidence_score >= 0 AND confidence_score <= 1)
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ----------------------------------------------------------------------------

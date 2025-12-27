@@ -51,7 +51,7 @@ export default function HomePage() {
               </h1>
               <p className="text-[16px] md:text-[18px] text-neutral-600 leading-relaxed mb-[32px]">
                 Connect with verified, professional dog trainers across Melbourne. 
-                Browse reviews, compare services, and book with confidence.
+                Browse reviews, compare services, and book with clarity.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/search">

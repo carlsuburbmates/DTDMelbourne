@@ -8,9 +8,11 @@
 -- Enable Row Level Security on all tables
 -- ----------------------------------------------------------------------------
 ALTER TABLE councils ENABLE ROW LEVEL SECURITY;
-ALTER TABLE localities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suburbs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE abn_verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE featured_placements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_audit ENABLE ROW LEVEL SECURITY;
@@ -32,10 +34,10 @@ TO public
 USING (true);
 
 -- ----------------------------------------------------------------------------
--- localities: Public read access
+-- suburbs: Public read access
 -- ----------------------------------------------------------------------------
-CREATE POLICY "Public read access to localities"
-ON localities
+CREATE POLICY "Public read access to suburbs"
+ON suburbs
 FOR SELECT
 TO public
 USING (true);
@@ -140,10 +142,30 @@ USING (is_admin())
 WITH CHECK (is_admin());
 
 -- ----------------------------------------------------------------------------
--- localities: Admin full access
+-- suburbs: Admin full access
 -- ----------------------------------------------------------------------------
-CREATE POLICY "Admin full access to localities"
-ON localities
+CREATE POLICY "Admin full access to suburbs"
+ON suburbs
+FOR ALL
+TO authenticated
+USING (is_admin())
+WITH CHECK (is_admin());
+
+-- ----------------------------------------------------------------------------
+-- abn_verifications: Admin full access
+-- ----------------------------------------------------------------------------
+CREATE POLICY "Admin full access to abn verifications"
+ON abn_verifications
+FOR ALL
+TO authenticated
+USING (is_admin())
+WITH CHECK (is_admin());
+
+-- ----------------------------------------------------------------------------
+-- subscriptions: Admin full access
+-- ----------------------------------------------------------------------------
+CREATE POLICY "Admin full access to subscriptions"
+ON subscriptions
 FOR ALL
 TO authenticated
 USING (is_admin())

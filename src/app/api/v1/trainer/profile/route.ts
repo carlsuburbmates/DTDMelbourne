@@ -7,8 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, verifyAccessToken, isTrainer } from '@/lib/auth';
 import {
-  createTrainerProfileRequestSchema,
-  updateTrainerProfileRequestSchema,
+  createBusinessRequestSchema,
+  updateBusinessRequestSchema,
   validateRequestBody,
 } from '@/lib/validation';
 import {
@@ -19,7 +19,7 @@ import {
   NotFoundError,
 } from '@/lib/errors';
 import { RateLimiters, getClientIp, checkRateLimitOrThrow, formatRateLimitHeaders } from '@/lib/rate-limit';
-import type { CreateTrainerProfileRequest, UpdateTrainerProfileRequest } from '@/types/api';
+import type { CreateBusinessRequest, UpdateBusinessRequest } from '@/types/api';
 
 /**
  * POST /api/v1/trainer/profile - Create trainer profile
@@ -47,46 +47,56 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json();
     const validatedBody = validateRequestBody(
-      createTrainerProfileRequestSchema,
+      createBusinessRequestSchema,
       body
-    ) as CreateTrainerProfileRequest;
+    ) as CreateBusinessRequest;
 
     // Check if trainer already has a profile
     const { data: existingProfile } = await supabase
       .from('businesses')
       .select('id')
-      .eq('resource_type', 'trainer')
-      .eq('email', user.email)
-      .single();
+      .eq('user_id', user.id)
+      .eq('deleted', false)
+      .maybeSingle();
 
     if (existingProfile) {
       throw new ForbiddenError('Trainer profile already exists');
+    }
+
+    const { data: suburb, error: suburbError } = await supabase
+      .from('suburbs')
+      .select('id, council_id, region')
+      .ilike('name', validatedBody.suburb)
+      .limit(1)
+      .maybeSingle();
+
+    if (suburbError) {
+      throw handleSupabaseError(suburbError);
+    }
+
+    if (!suburb) {
+      throw new ForbiddenError('Suburb not found');
     }
 
     // Create trainer profile
     const { data: trainer, error } = await supabase
       .from('businesses')
       .insert({
+        user_id: user.id,
         name: validatedBody.name,
         resource_type: 'trainer',
-        locality_id: validatedBody.locality_id,
-        council_id: validatedBody.council_id,
+        suburb_id: suburb.id,
+        council_id: suburb.council_id,
+        region: suburb.region,
+        address: validatedBody.address,
         phone: validatedBody.phone,
-        email: user.email,
-        website: validatedBody.website,
-        description: validatedBody.description,
-        age_specialties: validatedBody.age_specialties || [],
-        behavior_issues: validatedBody.behavior_issues || [],
-        service_type_primary: validatedBody.service_type_primary,
-        service_type_secondary: validatedBody.service_type_secondary,
-        abr_abn: validatedBody.abr_abn,
-        emergency_phone: validatedBody.emergency_phone,
-        emergency_hours: validatedBody.emergency_hours,
-        emergency_services: validatedBody.emergency_services,
-        verified: false,
+        email: validatedBody.email || null,
+        website: validatedBody.website || null,
         claimed: true,
+        claimed_at: new Date().toISOString(),
         scaffolded: false,
         data_source: 'manual_form',
+        tier: 'basic',
       })
       .select()
       .single();
@@ -154,8 +164,7 @@ export async function PUT(request: NextRequest) {
     const { data: existingProfile, error: fetchError } = await supabase
       .from('businesses')
       .select('id')
-      .eq('resource_type', 'trainer')
-      .eq('email', user.email)
+      .eq('user_id', user.id)
       .single();
 
     if (fetchError || !existingProfile) {
@@ -165,9 +174,9 @@ export async function PUT(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json();
     const validatedBody = validateRequestBody(
-      updateTrainerProfileRequestSchema,
+      updateBusinessRequestSchema,
       body
-    ) as UpdateTrainerProfileRequest;
+    ) as UpdateBusinessRequest;
 
     // Update trainer profile
     const { data: trainer, error } = await supabase
@@ -242,11 +251,10 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         council:councils(id, name, region, shire, ux_label),
-        locality:localities(id, name, postcode, region, ux_label)
+        suburb:suburbs(id, name, postcode, region, ux_label)
       `)
-      .eq('resource_type', 'trainer')
-      .eq('email', user.email)
-      .eq('deleted_at', null)
+      .eq('user_id', user.id)
+      .eq('deleted', false)
       .single();
 
     if (fetchError || !trainer) {
@@ -259,8 +267,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('business_id', trainer.id)
       .eq('status', 'active')
-      .gte('start_date', new Date().toISOString())
-      .lte('end_date', new Date().toISOString())
+      .gt('ends_at', new Date().toISOString())
       .maybeSingle();
 
     // Get reviews

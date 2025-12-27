@@ -61,7 +61,6 @@ interface AnalyticsContextType {
     severity: 'low' | 'medium' | 'high';
     description: string;
     classification?: string;
-    confidenceScore?: number;
   }) => void;
   trackCustomEvent: (
     eventType: string,
@@ -203,7 +202,6 @@ export function AnalyticsProvider({ children, userId }: AnalyticsProviderProps) 
     severity: 'low' | 'medium' | 'high';
     description: string;
     classification?: string;
-    confidenceScore?: number;
   }) => {
     trackEmergency({
       ...properties,

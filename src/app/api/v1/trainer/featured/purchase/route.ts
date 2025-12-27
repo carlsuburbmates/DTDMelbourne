@@ -5,7 +5,7 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, verifyAccessToken, isTrainer } from '@/lib/auth';
+import { supabaseAdmin, verifyAccessToken, isTrainer } from '@/lib/auth';
 import {
   purchaseFeaturedRequestSchema,
   validateRequestBody,
@@ -16,9 +16,10 @@ import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
-  PaymentFailedError,
+  BadRequestError,
 } from '@/lib/errors';
 import { RateLimiters, getClientIp, checkRateLimitOrThrow, formatRateLimitHeaders } from '@/lib/rate-limit';
+import { createFeaturedCheckoutSession } from '@/lib/stripe';
 import type { PurchaseFeaturedRequest } from '@/types/api';
 
 /**
@@ -44,19 +45,6 @@ export async function POST(request: NextRequest) {
       throw new ForbiddenError('Only trainers can purchase featured placements');
     }
 
-    // Get trainer's business profile
-    const { data: existingProfile, error: fetchError } = await supabase
-      .from('businesses')
-      .select('id, name, email')
-      .eq('resource_type', 'trainer')
-      .eq('email', user.email)
-      .eq('deleted_at', null)
-      .single();
-
-    if (fetchError || !existingProfile) {
-      throw new NotFoundError('Trainer profile not found');
-    }
-
     // Parse and validate request body
     const body = await request.json();
     const validatedBody = validateRequestBody(
@@ -64,74 +52,49 @@ export async function POST(request: NextRequest) {
       body
     ) as PurchaseFeaturedRequest;
 
-    // Check if trainer already has active featured placement
-    const { data: activeFeatured } = await supabase
-      .from('featured_placements')
-      .select('id')
-      .eq('business_id', existingProfile.id)
-      .eq('status', 'active')
-      .gte('start_date', new Date().toISOString())
-      .lte('end_date', new Date().toISOString())
-      .maybeSingle();
-
-    if (activeFeatured) {
-      throw new ForbiddenError('Trainer already has an active featured placement');
-    }
-
-    // Check if trainer is already in queue
-    const { data: queuedFeatured } = await supabase
-      .from('featured_placements')
-      .select('id')
-      .eq('business_id', existingProfile.id)
-      .eq('status', 'queued')
-      .maybeSingle();
-
-    if (queuedFeatured) {
-      throw new ForbiddenError('Trainer is already in the featured queue');
-    }
-
-    // Calculate amount ($20 per day)
-    const amount = validatedBody.duration_days * 2000; // $20 = 2000 cents
-
-    // Create Stripe payment intent (placeholder - integrate with Stripe)
-    // TODO: Integrate with Stripe API
-    const paymentIntentId = `pi_${Date.now()}_${existingProfile.id}`;
-    const clientSecret = `pi_${Date.now()}_secret_${existingProfile.id}`;
-
-    // Create featured placement record
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + validatedBody.duration_days);
-
-    const { data: featuredPlacement, error } = await supabase
-      .from('featured_placements')
-      .insert({
-        business_id: existingProfile.id,
-        council_id: validatedBody.council_id,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
-        amount: amount,
-        currency: 'aud',
-        status: 'queued',
-        payment_intent_id: paymentIntentId,
-      })
-      .select()
+    // Get trainer's business profile
+    const { data: existingProfile, error: fetchError } = await supabaseAdmin
+      .from('businesses')
+      .select('id, council_id, user_id')
+      .eq('id', validatedBody.business_id)
+      .eq('user_id', user.id)
+      .eq('deleted', false)
       .single();
 
-    if (error) {
-      throw handleSupabaseError(error);
+    if (fetchError || !existingProfile) {
+      throw new NotFoundError('Trainer profile not found');
     }
+
+    if (existingProfile.council_id !== validatedBody.council_id) {
+      throw new BadRequestError('Council does not match business listing');
+    }
+
+    const { data: existingPlacement } = await supabaseAdmin
+      .from('featured_placements')
+      .select('id, status')
+      .eq('business_id', existingProfile.id)
+      .in('status', ['active', 'queued'])
+      .maybeSingle();
+
+    if (existingPlacement) {
+      throw new BadRequestError('Featured placement already active or queued');
+    }
+
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const session = await createFeaturedCheckoutSession({
+      businessId: existingProfile.id,
+      councilId: existingProfile.council_id,
+      successUrl: `${appUrl}/trainer/featured/success`,
+      cancelUrl: `${appUrl}/trainer/featured/cancelled`,
+    });
 
     // Return response
     return NextResponse.json(
       {
         success: true,
         data: {
-          featured_placement: featuredPlacement,
-          payment_intent_id: paymentIntentId,
-          client_secret: clientSecret,
-          amount: amount,
-          currency: 'aud',
+          session_id: session.sessionId,
+          checkout_url: session.url,
         },
         meta: {
           timestamp: new Date().toISOString(),
@@ -151,7 +114,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       formatErrorResponse(apiError as any, apiError.message || 'Failed to purchase featured placement'),
       {
-        status: apiError instanceof UnauthorizedError || apiError instanceof ForbiddenError || apiError instanceof NotFoundError ? 401 : 500,
+        status: apiError instanceof UnauthorizedError || apiError instanceof ForbiddenError || apiError instanceof NotFoundError || apiError instanceof BadRequestError ? 401 : 500,
         headers: { 'Content-Type': 'application/json' },
       }
     );

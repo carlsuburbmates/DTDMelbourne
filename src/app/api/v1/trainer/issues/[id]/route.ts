@@ -50,9 +50,8 @@ export async function DELETE(
     const { data: existingProfile, error: fetchError } = await supabase
       .from('businesses')
       .select('id, behavior_issues')
-      .eq('resource_type', 'trainer')
-      .eq('email', user.email)
-      .eq('deleted_at', null)
+      .eq('user_id', user.id)
+      .eq('deleted', false)
       .single();
 
     if (fetchError || !existingProfile) {

@@ -9,6 +9,9 @@ import { logError } from './errors';
 import { promoteFromQueue } from './featured-queue';
 import type { FeaturedPlacement } from '../types/database';
 
+const FEATURED_DURATION_DAYS = 30;
+const FEATURED_PRICE_CENTS = 1500;
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -21,9 +24,8 @@ export interface FeaturedTrainerResult {
   businessName: string;
   councilId: string;
   councilName: string;
-  startDate: string;
-  endDate: string;
-  tier: string;
+  startsAt: string;
+  endsAt: string;
 }
 
 /**
@@ -45,7 +47,6 @@ export interface FeaturedExpiryResult {
 export async function createFeaturedPlacement(
   trainerId: string,
   councilId: string,
-  days: number,
   stripePaymentId: string
 ): Promise<FeaturedPlacement> {
   try {
@@ -63,21 +64,20 @@ export async function createFeaturedPlacement(
     // Calculate dates
     const startDate = new Date();
     const endDate = new Date();
-    endDate.setDate(endDate.getDate() + days);
+    endDate.setDate(endDate.getDate() + FEATURED_DURATION_DAYS);
 
     // Create featured placement
     const { data, error } = await supabaseAdmin
       .from('featured_placements')
       .insert({
-        business_id: parseInt(trainerId, 10),
-        council_id: parseInt(councilId, 10),
+        business_id: trainerId,
+        council_id: councilId,
         stripe_payment_id: stripePaymentId,
-        amount_cents: days * 2000,
+        amount_cents: FEATURED_PRICE_CENTS,
         currency: 'AUD',
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
+        starts_at: startDate.toISOString(),
+        ends_at: endDate.toISOString(),
         status: 'queued',
-        tier: 'basic',
       })
       .select()
       .single();
@@ -98,7 +98,6 @@ export async function createFeaturedPlacement(
  */
 export async function extendFeaturedPlacement(
   trainerId: string,
-  days: number,
   stripePaymentId: string
 ): Promise<FeaturedPlacement> {
   try {
@@ -108,7 +107,7 @@ export async function extendFeaturedPlacement(
       .select('*')
       .eq('business_id', trainerId)
       .eq('status', 'active')
-      .order('end_date', { ascending: false })
+      .order('ends_at', { ascending: false })
       .limit(1)
       .single();
 
@@ -117,23 +116,22 @@ export async function extendFeaturedPlacement(
     }
 
     // Calculate new end date
-    const currentEndDate = new Date(currentPlacement.end_date);
+    const currentEndDate = new Date(currentPlacement.ends_at);
     const newEndDate = new Date(currentEndDate);
-    newEndDate.setDate(newEndDate.getDate() + days);
+    newEndDate.setDate(newEndDate.getDate() + FEATURED_DURATION_DAYS);
 
     // Create new placement record for extension
     const { data, error } = await supabaseAdmin
       .from('featured_placements')
       .insert({
-        business_id: parseInt(trainerId, 10),
+        business_id: trainerId,
         council_id: currentPlacement.council_id,
         stripe_payment_id: stripePaymentId,
-        amount_cents: days * 2000,
+        amount_cents: FEATURED_PRICE_CENTS,
         currency: 'AUD',
-        start_date: currentPlacement.end_date,
-        end_date: newEndDate.toISOString().split('T')[0],
+        starts_at: currentPlacement.ends_at,
+        ends_at: newEndDate.toISOString(),
         status: 'active',
-        tier: 'basic',
       })
       .select()
       .single();
@@ -176,7 +174,6 @@ export async function cancelFeaturedPlacement(
       .from('featured_placements')
       .update({
         status: 'cancelled',
-        refund_reason: reason,
       })
       .eq('id', placement.id);
 
@@ -218,8 +215,8 @@ export async function getFeaturedTrainers(
         )
       `)
       .eq('status', 'active')
-      .gte('end_date', new Date().toISOString().split('T')[0])
-      .order('end_date', { ascending: true });
+      .gte('ends_at', new Date().toISOString())
+      .order('ends_at', { ascending: true });
 
     if (councilId) {
       query = query.eq('council_id', councilId);
@@ -236,9 +233,8 @@ export async function getFeaturedTrainers(
       businessName: (placement.businesses as any)?.name || '',
       councilId: placement.council_id.toString(),
       councilName: (placement.councils as any)?.name || '',
-      startDate: placement.start_date,
-      endDate: placement.end_date,
-      tier: placement.tier,
+      startsAt: placement.starts_at,
+      endsAt: placement.ends_at,
     }));
   } catch (error) {
     logError(error, { context: 'getFeaturedTrainers', councilId });
@@ -257,14 +253,14 @@ export async function checkFeaturedExpiry(): Promise<FeaturedExpiryResult> {
   };
 
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString();
 
     // Get all expired active placements
     const { data: expiredPlacements, error: fetchError } = await supabaseAdmin
       .from('featured_placements')
       .select('*, council_id')
       .eq('status', 'active')
-      .lt('end_date', today);
+      .lt('ends_at', today);
 
     if (fetchError) {
       throw new Error('Failed to fetch expired placements');
@@ -369,7 +365,7 @@ export async function getFeaturedPlacementById(
  */
 export async function getFeaturedPlacementsByCouncil(
   councilId: string,
-  status?: 'active' | 'queued' | 'expired' | 'cancelled' | 'refunded'
+  status?: 'active' | 'queued' | 'expired' | 'cancelled'
 ): Promise<FeaturedPlacement[]> {
   try {
     let query = supabaseAdmin
@@ -407,7 +403,7 @@ export async function hasActiveFeaturedPlacement(
       .select('id')
       .eq('business_id', trainerId)
       .eq('status', 'active')
-      .gte('end_date', new Date().toISOString().split('T')[0])
+      .gte('ends_at', new Date().toISOString().split('T')[0])
       .limit(1);
 
     if (error) {

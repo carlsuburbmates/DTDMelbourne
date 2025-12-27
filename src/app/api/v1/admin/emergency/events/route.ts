@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
     const mockEvents: EmergencyEvent[] = [
       {
         id: '1',
-        type: 'AI Response Timeout',
+        type: 'Response Timeout',
         severity: 'high',
-        description: 'AI assistant failed to respond within timeout threshold',
+        description: 'Response failed to arrive within timeout limit',
         timestamp: new Date('2025-12-26T10:30:00Z'),
         resolved: false,
       },

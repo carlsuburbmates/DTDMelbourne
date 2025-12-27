@@ -30,16 +30,15 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('emergency_contacts')
-      .select('*')
-      .eq('deleted_at', null);
+      .select('*');
 
     // Apply filters
     if (validatedParams.council_id) {
       query = query.eq('council_id', validatedParams.council_id);
     }
 
-    if (validatedParams.locality_id) {
-      query = query.eq('locality_id', validatedParams.locality_id);
+    if (validatedParams.suburb_id) {
+      query = query.eq('suburb_id', validatedParams.suburb_id);
     }
 
     if (validatedParams.resource_type) {

@@ -30,15 +30,22 @@ export const stripe = new Stripe(stripeSecretKey, {
 // ============================================================================
 
 /**
- * Checkout session creation parameters
+ * Featured checkout session creation parameters
  */
-export interface CreateCheckoutSessionParams {
+export interface CreateFeaturedCheckoutSessionParams {
   businessId: string;
   councilId: string;
-  durationDays: number;
   successUrl: string;
   cancelUrl: string;
-  priceId?: string;
+}
+
+/**
+ * Pro subscription checkout session parameters
+ */
+export interface CreateProSubscriptionSessionParams {
+  businessId: string;
+  successUrl: string;
+  cancelUrl: string;
 }
 
 /**
@@ -49,6 +56,11 @@ export interface CheckoutSessionResult {
   url: string;
   paymentIntentId?: string;
 }
+
+const FEATURED_DURATION_DAYS = 30;
+const FEATURED_PRICE_CENTS = 1500;
+const PRO_PRICE_CENTS = 2000;
+const PRO_INTERVAL_DAYS = 30;
 
 /**
  * Webhook event data
@@ -66,14 +78,13 @@ export interface WebhookEventData {
 /**
  * Create Stripe checkout session for featured placement purchase
  */
-export async function createCheckoutSession(
-  params: CreateCheckoutSessionParams
+export async function createFeaturedCheckoutSession(
+  params: CreateFeaturedCheckoutSessionParams
 ): Promise<CheckoutSessionResult> {
   try {
-    // Get business details
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
-      .select('name, council_id')
+      .select('name')
       .eq('id', params.businessId)
       .single();
 
@@ -81,10 +92,6 @@ export async function createCheckoutSession(
       throw new Error('Business not found');
     }
 
-    // Calculate amount (AUD $20 per day)
-    const amountCents = params.durationDays * 2000;
-
-    // Create checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -93,14 +100,9 @@ export async function createCheckoutSession(
             currency: 'aud',
             product_data: {
               name: `Featured Placement - ${business.name}`,
-              description: `${params.durationDays} day featured placement`,
-              metadata: {
-                business_id: params.businessId,
-                council_id: params.councilId,
-                duration_days: params.durationDays.toString(),
-              },
+              description: `${FEATURED_DURATION_DAYS} day featured placement`,
             },
-            unit_amount: amountCents,
+            unit_amount: FEATURED_PRICE_CENTS,
           },
           quantity: 1,
         },
@@ -109,35 +111,12 @@ export async function createCheckoutSession(
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
       metadata: {
+        product: 'featured',
         business_id: params.businessId,
         council_id: params.councilId,
-        duration_days: params.durationDays.toString(),
+        duration_days: FEATURED_DURATION_DAYS.toString(),
       },
-      customer_email: undefined, // Will be collected during checkout
     });
-
-    // Create featured placement record with queued status
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + params.durationDays);
-
-    const { error: placementError } = await supabaseAdmin
-      .from('featured_placements')
-      .insert({
-        business_id: params.businessId,
-        council_id: params.councilId,
-        stripe_payment_id: session.payment_intent as string,
-        amount_cents: amountCents,
-        currency: 'AUD',
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        status: 'queued',
-        tier: 'basic',
-      });
-
-    if (placementError) {
-      throw new Error('Failed to create featured placement record');
-    }
 
     return {
       sessionId: session.id,
@@ -145,7 +124,57 @@ export async function createCheckoutSession(
       paymentIntentId: session.payment_intent as string,
     };
   } catch (error) {
-    logError(error, { context: 'createCheckoutSession', params });
+    logError(error, { context: 'createFeaturedCheckoutSession', params });
+    throw handleStripeError(error);
+  }
+}
+
+/**
+ * Create Stripe checkout session for Pro (Gold Card) subscription
+ */
+export async function createProSubscriptionSession(
+  params: CreateProSubscriptionSessionParams
+): Promise<CheckoutSessionResult> {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'aud',
+            product_data: {
+              name: 'Pro (Gold Card)',
+              description: '30 day subscription',
+            },
+            recurring: {
+              interval: 'day',
+              interval_count: PRO_INTERVAL_DAYS,
+            },
+            unit_amount: PRO_PRICE_CENTS,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: params.successUrl,
+      cancel_url: params.cancelUrl,
+      subscription_data: {
+        metadata: {
+          business_id: params.businessId,
+        },
+      },
+      metadata: {
+        product: 'pro',
+        business_id: params.businessId,
+      },
+    });
+
+    return {
+      sessionId: session.id,
+      url: session.url!,
+    };
+  } catch (error) {
+    logError(error, { context: 'createProSubscriptionSession', params });
     throw handleStripeError(error);
   }
 }
@@ -188,180 +217,166 @@ export function parseWebhookEvent(event: Stripe.Event): WebhookEventData {
 // ============================================================================
 
 /**
- * Process successful payment
+ * Process checkout session completion (featured or pro)
  */
-export async function processSuccessfulPayment(
-  paymentIntent: Stripe.PaymentIntent
+export async function processCheckoutSessionCompleted(
+  session: Stripe.Checkout.Session
 ): Promise<void> {
-  try {
-    const businessId = paymentIntent.metadata?.business_id;
-    const councilId = paymentIntent.metadata?.council_id;
-    const durationDays = parseInt(paymentIntent.metadata?.duration_days || '0', 10);
+  const product = session.metadata?.product;
+  if (product === 'featured') {
+    await processFeaturedCheckout(session);
+    return;
+  }
 
-    if (!businessId || !councilId) {
-      throw new Error('Missing required metadata in payment intent');
-    }
-
-    // Get featured placement
-    const { data: featuredPlacement, error: fetchError } = await supabaseAdmin
-      .from('featured_placements')
-      .select('*')
-      .eq('stripe_payment_id', paymentIntent.id)
-      .single();
-
-    if (fetchError || !featuredPlacement) {
-      throw new Error('Featured placement not found');
-    }
-
-    // Update featured placement status to active
-    const { error: updateError } = await supabaseAdmin
-      .from('featured_placements')
-      .update({
-        status: 'active',
-        queue_activated_at: new Date().toISOString(),
-      })
-      .eq('id', featuredPlacement.id);
-
-    if (updateError) {
-      throw new Error('Failed to update featured placement');
-    }
-
-    // Create payment audit record
-    await createPaymentAudit({
-      stripe_event_id: paymentIntent.id,
-      stripe_event_type: 'payment_intent.succeeded',
-      business_id: parseInt(businessId, 10),
-      council_id: parseInt(councilId, 10),
-      payment_intent_id: paymentIntent.id,
-      charge_id: paymentIntent.latest_charge as string,
-      customer_id: paymentIntent.customer as string,
-      amount_cents: paymentIntent.amount,
-      currency: paymentIntent.currency.toUpperCase(),
-      status: 'succeeded',
-      webhook_received_at: new Date().toISOString(),
-      processed_at: new Date().toISOString(),
-      processing_success: true,
-    });
-  } catch (error) {
-    logError(error, { context: 'processSuccessfulPayment', paymentIntentId: paymentIntent.id });
-    throw handleStripeError(error);
+  if (product === 'pro') {
+    await processProSubscription(session);
   }
 }
 
 /**
- * Process failed payment
+ * Process featured checkout completion
  */
-export async function processFailedPayment(
-  paymentIntent: Stripe.PaymentIntent
-): Promise<void> {
-  try {
-    const businessId = paymentIntent.metadata?.business_id;
-
-    if (!businessId) {
-      throw new Error('Missing required metadata in payment intent');
-    }
-
-    // Get featured placement
-    const { data: featuredPlacement, error: fetchError } = await supabaseAdmin
-      .from('featured_placements')
-      .select('*')
-      .eq('stripe_payment_id', paymentIntent.id)
-      .single();
-
-    if (fetchError || !featuredPlacement) {
-      throw new Error('Featured placement not found');
-    }
-
-    // Update featured placement status to refunded
-    const { error: updateError } = await supabaseAdmin
-      .from('featured_placements')
-      .update({
-        status: 'refunded',
-        refund_reason: paymentIntent.last_payment_error?.message || 'Payment failed',
-        refunded_at: new Date().toISOString(),
-        refund_amount_cents: paymentIntent.amount,
-      })
-      .eq('id', featuredPlacement.id);
-
-    if (updateError) {
-      throw new Error('Failed to update featured placement');
-    }
-
-    // Create payment audit record
-    await createPaymentAudit({
-      stripe_event_id: paymentIntent.id,
-      stripe_event_type: 'payment_intent.payment_failed',
-      business_id: parseInt(businessId, 10),
-      council_id: featuredPlacement.council_id,
-      payment_intent_id: paymentIntent.id,
-      charge_id: paymentIntent.latest_charge as string,
-      customer_id: paymentIntent.customer as string,
-      amount_cents: paymentIntent.amount,
-      currency: paymentIntent.currency.toUpperCase(),
-      status: 'failed',
-      webhook_received_at: new Date().toISOString(),
-      processed_at: new Date().toISOString(),
-      processing_success: false,
-      processing_error: paymentIntent.last_payment_error?.message,
-    });
-  } catch (error) {
-    logError(error, { context: 'processFailedPayment', paymentIntentId: paymentIntent.id });
-    throw handleStripeError(error);
-  }
-}
-
-/**
- * Process expired checkout session
- */
-export async function processExpiredSession(
+async function processFeaturedCheckout(
   session: Stripe.Checkout.Session
 ): Promise<void> {
   try {
     const businessId = session.metadata?.business_id;
-
-    if (!businessId) {
-      throw new Error('Missing required metadata in session');
+    const councilId = session.metadata?.council_id;
+    if (!businessId || !councilId) {
+      throw new Error('Missing required metadata in checkout session');
     }
 
-    // Get featured placement
-    const { data: featuredPlacement, error: fetchError } = await supabaseAdmin
+    if (!session.payment_intent) {
+      throw new Error('Missing payment intent in checkout session');
+    }
+
+    const { data: existingPlacement } = await supabaseAdmin
       .from('featured_placements')
-      .select('*')
+      .select('id')
       .eq('stripe_payment_id', session.payment_intent as string)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !featuredPlacement) {
-      throw new Error('Featured placement not found');
+    if (existingPlacement) {
+      return;
     }
 
-    // Update featured placement status to cancelled
-    const { error: updateError } = await supabaseAdmin
-      .from('featured_placements')
-      .update({
-        status: 'cancelled',
-      })
-      .eq('id', featuredPlacement.id);
+    const startsAt = new Date();
+    const endsAt = new Date();
+    endsAt.setDate(endsAt.getDate() + FEATURED_DURATION_DAYS);
 
-    if (updateError) {
-      throw new Error('Failed to update featured placement');
-    }
-
-    // Create payment audit record
-    await createPaymentAudit({
-      stripe_event_id: session.id,
-      stripe_event_type: 'checkout.session.expired',
-      business_id: parseInt(businessId, 10),
-      council_id: featuredPlacement.council_id,
-      payment_intent_id: session.payment_intent as string,
-      amount_cents: session.amount_total || 0,
-      currency: session.currency?.toUpperCase() || 'AUD',
-      status: 'expired',
-      webhook_received_at: new Date().toISOString(),
-      processed_at: new Date().toISOString(),
-      processing_success: true,
+    const { error } = await supabaseAdmin.from('featured_placements').insert({
+      business_id: businessId,
+      council_id: councilId,
+      stripe_payment_id: session.payment_intent as string,
+      amount_cents: FEATURED_PRICE_CENTS,
+      currency: 'AUD',
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      status: 'queued',
     });
+
+    if (error) {
+      throw new Error('Failed to create featured placement');
+    }
   } catch (error) {
-    logError(error, { context: 'processExpiredSession', sessionId: session.id });
+    logError(error, { context: 'processFeaturedCheckout', sessionId: session.id });
+    throw handleStripeError(error);
+  }
+}
+
+/**
+ * Process Pro subscription checkout completion
+ */
+async function processProSubscription(
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  try {
+    const businessId = session.metadata?.business_id;
+    if (!businessId) {
+      throw new Error('Missing business_id in checkout metadata');
+    }
+
+    const subscriptionId = session.subscription as string | null;
+    if (!subscriptionId) {
+      throw new Error('Missing subscription ID');
+    }
+
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+
+    const { error: upsertError } = await supabaseAdmin
+      .from('subscriptions')
+      .upsert(
+        {
+          business_id: businessId,
+          tier: 'pro',
+          status: subscription.status,
+          current_period_end: currentPeriodEnd,
+          stripe_subscription_id: subscription.id,
+        },
+        { onConflict: 'business_id' }
+      );
+
+    if (upsertError) {
+      throw new Error('Failed to update subscription');
+    }
+
+    const { error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .update({ tier: 'pro' })
+      .eq('id', businessId);
+
+    if (businessError) {
+      throw new Error('Failed to update business tier');
+    }
+  } catch (error) {
+    logError(error, { context: 'processProSubscription', sessionId: session.id });
+    throw handleStripeError(error);
+  }
+}
+
+/**
+ * Process subscription updates
+ */
+export async function processSubscriptionUpdated(
+  subscription: Stripe.Subscription
+): Promise<void> {
+  try {
+    const businessId = subscription.metadata?.business_id;
+    if (!businessId) {
+      return;
+    }
+
+    const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+
+    const { error: upsertError } = await supabaseAdmin
+      .from('subscriptions')
+      .upsert(
+        {
+          business_id: businessId,
+          tier: 'pro',
+          status: subscription.status,
+          current_period_end: currentPeriodEnd,
+          stripe_subscription_id: subscription.id,
+        },
+        { onConflict: 'business_id' }
+      );
+
+    if (upsertError) {
+      throw new Error('Failed to update subscription');
+    }
+
+    const newTier = subscription.status === 'active' ? 'pro' : 'basic';
+    const { error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .update({ tier: newTier })
+      .eq('id', businessId);
+
+    if (businessError) {
+      throw new Error('Failed to update business tier');
+    }
+  } catch (error) {
+    logError(error, { context: 'processSubscriptionUpdated', subscriptionId: subscription.id });
     throw handleStripeError(error);
   }
 }
@@ -421,12 +436,12 @@ export async function getPaymentIntent(
 // ============================================================================
 
 export {
-  createCheckoutSession,
+  createFeaturedCheckoutSession,
+  createProSubscriptionSession,
   verifyWebhookSignature,
   parseWebhookEvent,
-  processSuccessfulPayment,
-  processFailedPayment,
-  processExpiredSession,
+  processCheckoutSessionCompleted,
+  processSubscriptionUpdated,
   getFeaturedPlacementByPaymentIntent,
   getPaymentIntent,
 };

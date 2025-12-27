@@ -47,9 +47,8 @@ export async function GET(request: NextRequest) {
     const { data: existingProfile, error: fetchError } = await supabase
       .from('businesses')
       .select('id, council_id')
-      .eq('resource_type', 'trainer')
-      .eq('email', user.email)
-      .eq('deleted_at', null)
+      .eq('user_id', user.id)
+      .eq('deleted', false)
       .single();
 
     if (fetchError || !existingProfile) {
@@ -70,8 +69,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .eq('business_id', existingProfile.id)
       .eq('status', 'active')
-      .gte('start_date', new Date().toISOString())
-      .lte('end_date', new Date().toISOString())
+      .gt('ends_at', new Date().toISOString())
       .maybeSingle();
 
     // Get queued featured placement
@@ -102,7 +100,7 @@ export async function GET(request: NextRequest) {
     // Calculate next available date
     let nextAvailableDate: string | null = null;
     if (activeFeatured) {
-      const endDate = new Date(activeFeatured.end_date);
+      const endDate = new Date(activeFeatured.ends_at);
       nextAvailableDate = endDate.toISOString();
     } else if (queuedFeatured) {
       // Estimate based on queue position (1 day per position)

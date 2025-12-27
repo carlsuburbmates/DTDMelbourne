@@ -9,11 +9,11 @@
 -- Usage: businesses.age_specialties (array), search filters
 -- ----------------------------------------------------------------------------
 CREATE TYPE dog_age_group AS ENUM (
-  'Puppy (0–6 months)',
-  'Adolescent (6–18 months)',
-  'Adult (1.5–7 years)',
-  'Senior (7+ years)',
-  'Any age'
+  'Puppies (0–6m)',
+  'Adolescent (6–18m)',
+  'Adult (18m–7y)',
+  'Senior (7y+)',
+  'Rescue'
 );
 
 -- ----------------------------------------------------------------------------
@@ -21,17 +21,17 @@ CREATE TYPE dog_age_group AS ENUM (
 -- Usage: businesses.behavior_issues (array), search filters
 -- ----------------------------------------------------------------------------
 CREATE TYPE dog_behavior_issue AS ENUM (
-  'Pulling on the lead',
+  'Pulling on lead',
   'Separation anxiety',
   'Excessive barking',
   'Dog aggression',
   'Leash reactivity',
-  'Jumping up on people',
+  'Jumping up',
   'Destructive behaviour',
   'Recall issues',
-  'Anxiety (general or fear-based)',
+  'Anxiety',
   'Resource guarding',
-  'Mouthing, nipping, biting',
+  'Mouthing/nipping/biting',
   'Rescue dog support',
   'Socialisation'
 );
@@ -78,8 +78,16 @@ CREATE TYPE featured_placement_status AS ENUM (
   'queued',
   'active',
   'expired',
-  'refunded',
   'cancelled'
+);
+
+-- ----------------------------------------------------------------------------
+-- Enum: business_tier
+-- Usage: businesses.tier, subscriptions.tier
+-- ----------------------------------------------------------------------------
+CREATE TYPE business_tier AS ENUM (
+  'basic',
+  'pro'
 );
 
 -- ----------------------------------------------------------------------------

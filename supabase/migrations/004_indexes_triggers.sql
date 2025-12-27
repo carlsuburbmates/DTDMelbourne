@@ -15,12 +15,12 @@ CREATE INDEX idx_councils_region ON councils(region);
 CREATE INDEX idx_councils_name ON councils(name);
 
 -- ----------------------------------------------------------------------------
--- localities indexes
+-- suburbs indexes
 -- ----------------------------------------------------------------------------
-CREATE INDEX idx_localities_council_id ON localities(council_id);
-CREATE INDEX idx_localities_name ON localities(name);
-CREATE INDEX idx_localities_region ON localities(region);
-CREATE INDEX idx_localities_postcode ON localities(postcode);
+CREATE INDEX idx_suburbs_council_id ON suburbs(council_id);
+CREATE INDEX idx_suburbs_name ON suburbs(name);
+CREATE INDEX idx_suburbs_region ON suburbs(region);
+CREATE INDEX idx_suburbs_postcode ON suburbs(postcode);
 
 -- ----------------------------------------------------------------------------
 -- users indexes
@@ -33,11 +33,12 @@ CREATE INDEX idx_users_email_verified ON users(email_verified);
 -- ----------------------------------------------------------------------------
 CREATE INDEX idx_businesses_user_id ON businesses(user_id);
 CREATE INDEX idx_businesses_council_id ON businesses(council_id);
-CREATE INDEX idx_businesses_locality_id ON businesses(locality_id);
+CREATE INDEX idx_businesses_suburb_id ON businesses(suburb_id);
+CREATE INDEX idx_businesses_region ON businesses(region);
 CREATE INDEX idx_businesses_resource_type ON businesses(resource_type);
-CREATE INDEX idx_businesses_verified ON businesses(verified);
+CREATE INDEX idx_businesses_abn_verified ON businesses(abn_verified);
 CREATE INDEX idx_businesses_claimed ON businesses(claimed);
-CREATE INDEX idx_businesses_featured_until ON businesses(featured_until);
+CREATE INDEX idx_businesses_tier ON businesses(tier);
 CREATE INDEX idx_businesses_deleted ON businesses(deleted);
 CREATE INDEX idx_businesses_age_specialties ON businesses USING GIN (age_specialties);
 CREATE INDEX idx_businesses_behavior_issues ON businesses USING GIN (behavior_issues);
@@ -58,9 +59,22 @@ CREATE INDEX idx_featured_placements_business_id ON featured_placements(business
 CREATE INDEX idx_featured_placements_council_id ON featured_placements(council_id);
 CREATE INDEX idx_featured_placements_status ON featured_placements(status);
 CREATE INDEX idx_featured_placements_stripe_payment_id ON featured_placements(stripe_payment_id);
-CREATE INDEX idx_featured_placements_end_date ON featured_placements(end_date) WHERE status = 'active';
+CREATE INDEX idx_featured_placements_ends_at ON featured_placements(ends_at) WHERE status = 'active';
 CREATE INDEX idx_featured_placements_queue ON featured_placements(council_id, queue_position) 
   WHERE status IN ('active', 'queued');
+
+-- ----------------------------------------------------------------------------
+-- abn_verifications indexes
+-- ----------------------------------------------------------------------------
+CREATE INDEX idx_abn_verifications_business_id ON abn_verifications(business_id);
+CREATE INDEX idx_abn_verifications_status ON abn_verifications(status);
+CREATE INDEX idx_abn_verifications_checked_at ON abn_verifications(checked_at);
+
+-- ----------------------------------------------------------------------------
+-- subscriptions indexes
+-- ----------------------------------------------------------------------------
+CREATE INDEX idx_subscriptions_business_id ON subscriptions(business_id);
+CREATE INDEX idx_subscriptions_status ON subscriptions(status);
 
 -- ----------------------------------------------------------------------------
 -- payment_audit indexes
@@ -230,6 +244,15 @@ FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 
 -- ----------------------------------------------------------------------------
+-- Trigger: update_suburbs_updated_at
+-- Purpose: Auto-update updated_at on suburbs
+-- ----------------------------------------------------------------------------
+CREATE TRIGGER update_suburbs_updated_at
+BEFORE UPDATE ON suburbs
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
+-- ----------------------------------------------------------------------------
 -- Trigger: update_reviews_updated_at
 -- Purpose: Auto-update updated_at on reviews
 -- ----------------------------------------------------------------------------
@@ -253,6 +276,15 @@ EXECUTE FUNCTION update_timestamp();
 -- ----------------------------------------------------------------------------
 CREATE TRIGGER update_emergency_contacts_updated_at
 BEFORE UPDATE ON emergency_contacts
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
+-- ----------------------------------------------------------------------------
+-- Trigger: update_subscriptions_updated_at
+-- Purpose: Auto-update updated_at on subscriptions
+-- ----------------------------------------------------------------------------
+CREATE TRIGGER update_subscriptions_updated_at
+BEFORE UPDATE ON subscriptions
 FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 

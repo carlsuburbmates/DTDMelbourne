@@ -130,7 +130,6 @@ export interface EmergencyProperties {
   description: string;
   sessionId: string;
   classification?: string;
-  confidenceScore?: number;
 }
 
 /**

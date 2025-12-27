@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const validatedParams = validateQueryParams(getSuburbsQuerySchema, queryParams);
 
     // Build query
-    let query = supabase.from('localities').select('*');
+    let query = supabase.from('suburbs').select('*');
 
     // Apply filters
     if (validatedParams.council_id) {

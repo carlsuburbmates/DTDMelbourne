@@ -21,26 +21,27 @@ import type {
 // ============================================================================
 
 const dogAgeGroupSchema = z.enum([
-  'Puppy (0–6 months)',
-  'Adolescent (6–18 months)',
-  'Adult (1.5–7 years)',
-  'Senior (7–10 years)',
-  'Any age',
+  'Puppies (0–6m)',
+  'Adolescent (6–18m)',
+  'Adult (18m–7y)',
+  'Senior (7y+)',
+  'Rescue',
 ] as const);
 
 const dogBehaviorIssueSchema = z.enum([
-  'Pulling on the lead',
+  'Pulling on lead',
   'Separation anxiety',
-  'Barking',
-  'Aggression',
-  'Jumping up on people',
+  'Excessive barking',
+  'Dog aggression',
+  'Leash reactivity',
+  'Jumping up',
+  'Destructive behaviour',
   'Recall issues',
+  'Anxiety',
+  'Resource guarding',
+  'Mouthing/nipping/biting',
+  'Rescue dog support',
   'Socialisation',
-  'Chewing',
-  'Digging',
-  'House training',
-  'Fear/phobias',
-  'Other',
 ] as const);
 
 const dogServiceTypeSchema = z.enum([
@@ -84,7 +85,6 @@ const featuredPlacementStatusSchema = z.enum([
   'queued',
   'active',
   'expired',
-  'refunded',
   'cancelled',
 ] as const);
 
@@ -112,7 +112,12 @@ export const sortSchema = z.object({
 /**
  * ID schema
  */
-export const idSchema = z.string().uuid('Invalid ID format');
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const idSchema = z
+  .string()
+  .refine((value) => uuidRegex.test(value) || /^\d+$/.test(value), 'Invalid ID format');
 
 /**
  * Email schema
@@ -154,16 +159,10 @@ export const coordinatesSchema = z.object({
  */
 export const searchTrainersQuerySchema = z.object({
   ...paginationSchema.shape,
-  ...sortSchema.shape,
-  council_id: idSchema.optional(),
-  locality_id: idSchema.optional(),
-  resource_type: dogBusinessResourceTypeSchema.optional(),
-  age_specialty: dogAgeGroupSchema.optional(),
-  behavior_issue: dogBehaviorIssueSchema.optional(),
-  service_type: dogServiceTypeSchema.optional(),
-  verified: z.coerce.boolean().optional(),
-  claimed: z.coerce.boolean().optional(),
-  search: z.string().min(1).max(200).optional(),
+  suburb: z.string().min(1).max(200),
+  age_stage: dogAgeGroupSchema,
+  behaviour_issue: dogBehaviorIssueSchema.optional(),
+  radius_km: z.coerce.number().positive().max(100).optional(),
 });
 
 /**
@@ -208,7 +207,7 @@ export const emergencyTriageRequestSchema = z.object({
   user_message: z.string().min(10).max(1000),
   location: z.object({
     council_id: idSchema.optional(),
-    locality_id: idSchema.optional(),
+    suburb_id: idSchema.optional(),
   }).optional(),
 });
 
@@ -218,7 +217,7 @@ export const emergencyTriageRequestSchema = z.object({
 export const emergencyContactsQuerySchema = z.object({
   ...paginationSchema.shape,
   council_id: idSchema.optional(),
-  locality_id: idSchema.optional(),
+  suburb_id: idSchema.optional(),
   resource_type: dogBusinessResourceTypeSchema.optional(),
 });
 
@@ -227,43 +226,53 @@ export const emergencyContactsQuerySchema = z.object({
 // ============================================================================
 
 /**
- * Create trainer profile request schema
+ * Create business request schema
  */
-export const createTrainerProfileRequestSchema = z.object({
+export const createBusinessRequestSchema = z.object({
   name: z.string().min(2).max(200),
-  locality_id: idSchema,
-  council_id: idSchema,
   phone: phoneSchema,
+  email: emailSchema.optional().nullable(),
+  address: z.string().min(5).max(300),
+  suburb: z.string().min(2).max(200),
+  website: urlSchema,
+});
+
+/**
+ * Update business request schema
+ */
+export const updateBusinessRequestSchema = z.object({
+  name: z.string().min(2).max(200).optional(),
+  address: z.string().min(5).max(300).optional(),
+  phone: phoneSchema.optional(),
   email: emailSchema.optional().nullable(),
   website: urlSchema,
   description: z.string().min(10).max(2000).optional().nullable(),
   age_specialties: z.array(dogAgeGroupSchema).min(1).max(5).optional(),
-  behavior_issues: z.array(dogBehaviorIssueSchema).min(1).max(10).optional(),
+  behavior_issues: z.array(dogBehaviorIssueSchema).min(1).max(13).optional(),
   service_type_primary: dogServiceTypeSchema.nullable().optional(),
   service_type_secondary: z.array(dogServiceTypeSchema).max(4).optional(),
-  abr_abn: z.string().regex(/^\d{11}$/).optional().nullable(),
+  formats_offered: z.array(z.string().max(100)).max(10).optional(),
+  pricing_notes: z.string().max(1000).optional().nullable(),
   emergency_phone: phoneSchema.optional().nullable(),
   emergency_hours: z.string().max(200).optional().nullable(),
   emergency_services: z.array(z.string().max(100)).max(5).optional(),
 });
 
 /**
- * Update trainer profile request schema
+ * Claim business request schema
  */
-export const updateTrainerProfileRequestSchema = z.object({
-  name: z.string().min(2).max(200).optional(),
-  phone: phoneSchema.optional(),
-  email: emailSchema.optional().nullable(),
-  website: urlSchema,
-  description: z.string().min(10).max(2000).optional().nullable(),
-  age_specialties: z.array(dogAgeGroupSchema).min(1).max(5).optional(),
-  behavior_issues: z.array(dogBehaviorIssueSchema).min(1).max(10).optional(),
-  service_type_primary: dogServiceTypeSchema.nullable().optional(),
-  service_type_secondary: z.array(dogServiceTypeSchema).max(4).optional(),
-  abr_abn: z.string().regex(/^\d{11}$/).optional().nullable(),
-  emergency_phone: phoneSchema.optional().nullable(),
-  emergency_hours: z.string().max(200).optional().nullable(),
-  emergency_services: z.array(z.string().max(100)).max(5).optional(),
+export const claimBusinessRequestSchema = z.object({
+  business_id: idSchema,
+  verification_method: z.literal('sms'),
+  code: z.string().min(4).max(10),
+});
+
+/**
+ * ABN verification request schema
+ */
+export const abnVerifyRequestSchema = z.object({
+  business_id: idSchema,
+  abn: z.string().regex(/^\d{11}$/),
 });
 
 /**
@@ -299,9 +308,8 @@ export const removeIssueRequestSchema = z.object({
  * Purchase featured placement request schema
  */
 export const purchaseFeaturedRequestSchema = z.object({
+  business_id: idSchema,
   council_id: idSchema,
-  duration_days: z.coerce.number().int().min(1).max(365),
-  payment_method_id: z.string().min(1),
 });
 
 /**
@@ -309,6 +317,13 @@ export const purchaseFeaturedRequestSchema = z.object({
  */
 export const getFeaturedStatusQuerySchema = z.object({
   council_id: idSchema.optional(),
+});
+
+/**
+ * Pro subscription request schema
+ */
+export const proSubscribeRequestSchema = z.object({
+  business_id: idSchema,
 });
 
 // ============================================================================
@@ -379,7 +394,6 @@ export const promoteFromQueueRequestSchema = z.object({
 export const emergencyLogsQuerySchema = z.object({
   ...paginationSchema.shape,
   classification: dogTriageClassificationSchema.optional(),
-  min_confidence: z.coerce.number().min(0).max(1).optional(),
   date_from: z.string().datetime().optional(),
   date_to: z.string().datetime().optional(),
 });

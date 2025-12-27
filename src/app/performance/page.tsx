@@ -198,9 +198,9 @@ function ScoreCard({
  * Core Web Vitals card
  */
 function CoreWebVitalsCard({ metrics }: { metrics: CoreWebVitals }) {
-  const getMetricStatus = (value: number, threshold: number): 'good' | 'needs-improvement' | 'poor' => {
-    if (value <= threshold) return 'good';
-    if (value <= threshold * 1.5) return 'needs-improvement';
+  const getMetricStatus = (value: number, target: number): 'good' | 'needs-improvement' | 'poor' => {
+    if (value <= target) return 'good';
+    if (value <= target * 1.5) return 'needs-improvement';
     return 'poor';
   };
 
@@ -226,7 +226,7 @@ function CoreWebVitalsCard({ metrics }: { metrics: CoreWebVitals }) {
             label="Largest Contentful Paint (LCP)"
             value={`${metrics.LCP.value.toFixed(0)} ms`}
             status={getMetricStatus(metrics.LCP.value, 2500)}
-            threshold="< 2.5s"
+            target="< 2.5s"
           />
         )}
         {metrics.FID && (
@@ -234,7 +234,7 @@ function CoreWebVitalsCard({ metrics }: { metrics: CoreWebVitals }) {
             label="First Input Delay (FID)"
             value={`${metrics.FID.value.toFixed(0)} ms`}
             status={getMetricStatus(metrics.FID.value, 100)}
-            threshold="< 100ms"
+            target="< 100ms"
           />
         )}
         {metrics.CLS && (
@@ -242,7 +242,7 @@ function CoreWebVitalsCard({ metrics }: { metrics: CoreWebVitals }) {
             label="Cumulative Layout Shift (CLS)"
             value={metrics.CLS.value.toFixed(3)}
             status={getMetricStatus(metrics.CLS.value, 0.1)}
-            threshold="< 0.1"
+            target="< 0.1"
           />
         )}
         {metrics.FCP && (
@@ -250,7 +250,7 @@ function CoreWebVitalsCard({ metrics }: { metrics: CoreWebVitals }) {
             label="First Contentful Paint (FCP)"
             value={`${metrics.FCP.value.toFixed(0)} ms`}
             status={getMetricStatus(metrics.FCP.value, 1800)}
-            threshold="< 1.8s"
+            target="< 1.8s"
           />
         )}
         {metrics.TTFB && (
@@ -258,7 +258,7 @@ function CoreWebVitalsCard({ metrics }: { metrics: CoreWebVitals }) {
             label="Time to First Byte (TTFB)"
             value={`${metrics.TTFB.value.toFixed(0)} ms`}
             status={getMetricStatus(metrics.TTFB.value, 600)}
-            threshold="< 600ms"
+            target="< 600ms"
           />
         )}
         {metrics.INP && (
@@ -266,7 +266,7 @@ function CoreWebVitalsCard({ metrics }: { metrics: CoreWebVitals }) {
             label="Interaction to Next Paint (INP)"
             value={`${metrics.INP.value.toFixed(0)} ms`}
             status={getMetricStatus(metrics.INP.value, 200)}
-            threshold="< 200ms"
+            target="< 200ms"
           />
         )}
       </div>
@@ -281,12 +281,12 @@ function MetricCard({
   label,
   value,
   status,
-  threshold,
+  target,
 }: {
   label: string;
   value: string;
   status: 'good' | 'needs-improvement' | 'poor';
-  threshold: string;
+  target: string;
 }) {
   const getStatusColor = (status: string): string => {
     switch (status) {
@@ -305,7 +305,7 @@ function MetricCard({
     <div className={`${getStatusColor(status)} rounded-lg p-4`}>
       <p className="text-sm font-medium">{label}</p>
       <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs mt-1">Target: {threshold}</p>
+      <p className="text-xs mt-1">Target: {target}</p>
     </div>
   );
 }

@@ -90,26 +90,6 @@ describe('PaymentAudit Component', () => {
     });
   });
 
-  it('should calculate refunded revenue', async () => {
-    const mockAudit = [
-      {
-        id: '1',
-        bookingId: 'booking-1',
-        amount: 10000,
-        status: 'refunded',
-        timestamp: '2025-01-01T00:00:00Z'
-      }
-    ];
-
-    (adminService.getPaymentAudit as any).mockResolvedValue({ payments: mockAudit, total: 1 });
-
-    render(<PaymentAudit />);
-
-    await waitFor(() => {
-      expect(screen.getByText('$100.00')).toBeInTheDocument();
-    });
-  });
-
   it('should handle pagination', async () => {
     const mockAudit = [
       {

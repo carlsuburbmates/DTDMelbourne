@@ -6,10 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/auth';
-import {
-  emailSchema,
-  phoneSchema,
-} from '@/lib/validation';
+import { emailSchema } from '@/lib/validation';
 import {
   handleSupabaseError,
   formatErrorResponse,
@@ -46,14 +43,6 @@ export async function POST(request: NextRequest) {
       throw new BadRequestError('Password must be between 8 and 128 characters');
     }
 
-    // Validate phone if provided
-    if (body.phone) {
-      const phoneValidation = phoneSchema.safeParse(body.phone);
-      if (!phoneValidation.success) {
-        throw new BadRequestError(phoneValidation.error.errors[0].message);
-      }
-    }
-
     // Check if user already exists
     const { data: existingUser } = await supabase
       .from('users')
@@ -75,17 +64,13 @@ export async function POST(request: NextRequest) {
       throw handleSupabaseError(authError);
     }
 
-    // Determine role based on request
-    const role = body.role || 'user';
-
     // Create user record in database
     const { data: user, error: dbError } = await supabaseAdmin
       .from('users')
       .insert({
         id: authData.user.id,
         email: body.email,
-        role: role,
-        phone: body.phone || null,
+        role: 'trainer',
       })
       .select()
       .single();
