@@ -31,6 +31,6 @@
     "jsdom": "^25.0.0",
     "terser-webpack-plugin": "^5.3.10",
     "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "vitest": "^4.0.16"
   }
 }
