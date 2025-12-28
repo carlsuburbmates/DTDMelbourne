@@ -663,19 +663,6 @@ export function isTrainer(user: UserSession['user']): boolean {
 }
 
 // ============================================================================
-// EXPORT ALL FUNCTIONS
-// ============================================================================
-
-export {
-  generateTotpSecret,
-  generateTotpQrCodeUrl,
-  generateBackupCodes,
-  verifyTotpCode,
-  generateOtpCode,
-  generateOtpExpiry,
-};
-
-// ============================================================================
 // COMMENTS
 // ============================================================================
 // 1. TOTP authentication for admin users

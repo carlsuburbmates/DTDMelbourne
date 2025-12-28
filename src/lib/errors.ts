@@ -489,31 +489,6 @@ export function withValidationHandler<T extends (...args: unknown[]) => Promise<
 }
 
 // ============================================================================
-// EXPORT ALL CLASSES AND FUNCTIONS
-// ============================================================================
-
-export {
-  ApiError,
-  BadRequestError,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ConflictError,
-  ValidationError,
-  RateLimitError,
-  InternalServerError,
-  InvalidCredentialsError,
-  TokenExpiredError,
-  MfaRequiredError,
-  MfaInvalidError,
-  TrainerNotFoundError,
-  TrainerAlreadyExistsError,
-  PaymentFailedError,
-  StripeError,
-  DatabaseError,
-};
-
-// ============================================================================
 // COMMENTS
 // ============================================================================
 // 1. Error code enumeration for all API errors

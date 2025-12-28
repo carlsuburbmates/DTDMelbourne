@@ -1,13 +1,13 @@
 // ============================================================================
-// DTD Phase 2: API Contract - Moderate Review
-// File: src/app/api/v1/admin/reviews/[id]/moderate/route.ts
-// Description: Moderate review
+// DTD Phase 2: API Contract - Update Trainer Status
+// File: src/app/api/v1/admin/trainers/[trainerId]/status/route.ts
+// Description: Update trainer status
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, verifyAccessToken, isAdmin } from '@/lib/auth';
 import {
-  moderateReviewRequestSchema,
+  updateTrainerStatusRequestSchema,
   validateRequestBody,
 } from '@/lib/validation';
 import {
@@ -18,14 +18,14 @@ import {
   NotFoundError,
 } from '@/lib/errors';
 import { RateLimiters, getClientIp, checkRateLimitOrThrow, formatRateLimitHeaders } from '@/lib/rate-limit';
-import type { ModerateReviewRequest } from '@/types/api';
+import type { UpdateTrainerStatusRequest } from '@/types/api';
 
 /**
- * PATCH /api/v1/admin/reviews/[id]/moderate - Moderate review
+ * PATCH /api/v1/admin/trainers/[trainerId]/status - Update trainer status
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { trainerId: string } }
 ) {
   try {
     // Rate limiting
@@ -43,45 +43,43 @@ export async function PATCH(
 
     // Check if user is an admin
     if (!isAdmin(user)) {
-      throw new ForbiddenError('Only admins can moderate reviews');
+      throw new ForbiddenError('Only admins can update trainer status');
     }
 
-    // Get review
-    const { data: existingReview, error: fetchError } = await supabase
-      .from('reviews')
-      .select('id, moderation_status')
-      .eq('id', params.id)
+    // Get trainer profile
+    const { data: existingTrainer, error: fetchError } = await supabase
+      .from('businesses')
+      .select('id, verified, claimed')
+      .eq('id', params.trainerId)
+      .eq('resource_type', 'trainer')
+      .eq('deleted_at', null)
       .single();
 
-    if (fetchError || !existingReview) {
-      throw new NotFoundError('Review not found');
-    }
-
-    // Check if review is already moderated
-    if (existingReview.moderation_status !== 'pending') {
-      throw new ForbiddenError('Review has already been moderated');
+    if (fetchError || !existingTrainer) {
+      throw new NotFoundError('Trainer not found');
     }
 
     // Parse and validate request body
     const body = await request.json();
     const validatedBody = validateRequestBody(
-      moderateReviewRequestSchema,
+      updateTrainerStatusRequestSchema,
       body
-    ) as ModerateReviewRequest;
+    ) as UpdateTrainerStatusRequest;
 
     // Store previous status
-    const previousStatus = existingReview.moderation_status;
+    const previousStatus = {
+      verified: existingTrainer.verified,
+      claimed: existingTrainer.claimed,
+    };
 
-    // Update review moderation status
-    const { data: review, error } = await supabase
-      .from('reviews')
+    // Update trainer status
+    const { data: trainer, error } = await supabase
+      .from('businesses')
       .update({
-        moderation_status: validatedBody.moderation_status,
-        rejection_reason: validatedBody.rejection_reason,
-        moderated_by: user.id,
-        moderated_at: new Date().toISOString(),
+        verified: validatedBody.verified,
+        claimed: validatedBody.claimed,
       })
-      .eq('id', params.id)
+      .eq('id', params.trainerId)
       .select()
       .single();
 
@@ -94,7 +92,7 @@ export async function PATCH(
       {
         success: true,
         data: {
-          review,
+          trainer,
           previous_status: previousStatus,
         },
         meta: {
@@ -113,7 +111,7 @@ export async function PATCH(
   } catch (error) {
     const apiError = error instanceof Error ? error : new Error('Unknown error');
     return NextResponse.json(
-      formatErrorResponse(apiError as any, apiError.message || 'Failed to moderate review'),
+      formatErrorResponse(apiError as any, apiError.message || 'Failed to update trainer status'),
       {
         status: apiError instanceof UnauthorizedError || apiError instanceof ForbiddenError || apiError instanceof NotFoundError ? 401 : 500,
         headers: { 'Content-Type': 'application/json' },

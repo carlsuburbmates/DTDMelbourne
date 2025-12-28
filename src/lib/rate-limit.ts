@@ -540,18 +540,6 @@ export class TokenBucketRateLimiter {
 }
 
 // ============================================================================
-// EXPORT ALL CLASSES AND FUNCTIONS
-// ============================================================================
-
-export {
-  RateLimiter,
-  SlidingWindowRateLimiter,
-  TokenBucketRateLimiter,
-  MemoryRateLimitStore,
-  RateLimitExceededError,
-};
-
-// ============================================================================
 // COMMENTS
 // ============================================================================
 // 1. Rate limiter class with in-memory store

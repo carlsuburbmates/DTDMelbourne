@@ -1,0 +1,36 @@
+{
+  "name": "dogtrainersdirectory",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.1",
+    "next": "^15.1.0",
+    "otplib": "^12.0.1",
+    "pg": "^8.12.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "stripe": "^14.25.0",
+    "web-vitals": "^4.2.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "eslint": "^9.6.0",
+    "eslint-config-next": "^15.1.0",
+    "jsdom": "^25.0.0",
+    "terser-webpack-plugin": "^5.3.10",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}

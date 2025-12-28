@@ -3,6 +3,8 @@
  * Includes code splitting, tree shaking, minification, and image optimization
  */
 
+const TerserPlugin = require('terser-webpack-plugin');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // React Strict Mode
@@ -40,58 +42,18 @@ const nextConfig = {
 
   // Code splitting
   experimental: {
-    // Optimize CSS
-    optimizeCss: true,
     // Optimize package imports
     optimizePackageImports: ['lucide-react', '@heroicons/react'],
   },
 
   // Webpack configuration
   webpack: (config, { isServer }) => {
-    // Tree shaking
-    config.optimization = {
-      ...config.optimization,
-      usedExports: true,
-      sideEffects: true,
-      providedExports: true,
-    };
-
-    // Code splitting
-    config.optimization.splitChunks = {
-      chunks: 'all',
-      cacheGroups: {
-        default: false,
-        vendors: false,
-        // Framework chunk
-        framework: {
-          name: 'framework',
-          chunks: 'all',
-          test: /[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types)[\\/]/,
-          priority: 40,
-          enforce: true,
-        },
-        // Lib chunk
-        lib: {
-          test: /[\\/]node_modules[\\/](@babel|@emotion|@mui|@redux|@swc|@tanstack)[\\/]/,
-          name: 'lib',
-          priority: 30,
-        },
-        // Commons chunk
-        commons: {
-          name: 'commons',
-          minChunks: 2,
-          priority: 20,
-          reuseExistingChunk: true,
-        },
-      },
-    };
-
     // Production optimizations
     if (!isServer) {
       config.optimization.minimize = true;
       config.optimization.minimizer = [
         // Terser for JS minification
-        require('terser-webpack-plugin'),
+        new TerserPlugin(),
       ];
     }
 
@@ -189,8 +151,6 @@ const nextConfig = {
   experimental: {
     // Optimize server components
     serverComponentsExternalPackages: [],
-    // Optimize CSS
-    optimizeCss: true,
     // Optimize package imports
     optimizePackageImports: ['lucide-react', '@heroicons/react'],
   },
